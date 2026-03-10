@@ -1,9 +1,9 @@
 import api from "@/lib/axios";
 import { useAuthStore } from "@/store/auth.store";
 import type {
+	AuthResponse,
 	LoginRequest,
 	RegisterRequest,
-	AuthResponse,
 	UserProfile,
 } from "@/types/auth";
 

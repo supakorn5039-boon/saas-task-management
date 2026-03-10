@@ -9,6 +9,7 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+config.ini
 
 # Logs
 logs
@@ -21,11 +22,13 @@ lerna-debug.log*
 
 # Local config
 *.local
+biome.json
+.claude/settings.local.json
 
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
@@ -34,4 +37,27 @@ lerna-debug.log*
 
 # OS files
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
 Thumbs.db
+
+# Go
+backend/vendor/
+backend/go.work
+backend/go.work.sum
+
+# Go binaries
+backend/main
+backend/migration
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Docker
+backend/docker/postgres/
+backend/docker/data/
