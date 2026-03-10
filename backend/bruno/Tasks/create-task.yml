@@ -1,0 +1,21 @@
+info:
+  name: Create Task
+  type: http
+  seq: 2
+
+http:
+  method: POST
+  url: "{{baseUrl}}/tasks"
+  body:
+    type: json
+    data: |-
+      {
+        "title": "My new task",
+        "description": "Task description here"
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+settings:
+  encodeUrl: true
