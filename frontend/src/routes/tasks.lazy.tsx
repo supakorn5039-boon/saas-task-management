@@ -73,13 +73,13 @@ function Tasks() {
 	if (isLoading) return <div className="p-8 text-center">Loading tasks...</div>;
 	if (error)
 		return (
-			<div className="p-8 text-center text-destructive">
+			<div className="text-destructive p-8 text-center">
 				Error loading tasks
 			</div>
 		);
 
 	return (
-		<div className="p-4 max-w-4xl mx-auto space-y-6">
+		<div className="mx-auto max-w-4xl space-y-6 p-4">
 			<Card>
 				<CardHeader>
 					<CardTitle>Add New Task</CardTitle>
@@ -117,7 +117,7 @@ function Tasks() {
 								<TableRow>
 									<TableCell
 										colSpan={3}
-										className="text-center py-8 text-muted-foreground"
+										className="text-muted-foreground py-8 text-center"
 									>
 										No tasks found. Add one above!
 									</TableCell>
@@ -139,7 +139,7 @@ function Tasks() {
 										<TableCell
 											className={
 												task.completed
-													? "line-through text-muted-foreground"
+													? "text-muted-foreground line-through"
 													: ""
 											}
 										>

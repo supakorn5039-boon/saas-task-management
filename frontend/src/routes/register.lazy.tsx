@@ -66,7 +66,7 @@ function RegisterPage() {
 		<div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-4">
 			<Card className="w-full max-w-md">
 				<CardHeader>
-					<CardTitle className="text-2xl font-bold text-center">
+					<CardTitle className="text-center text-2xl font-bold">
 						Register
 					</CardTitle>
 					<CardDescription className="text-center">
@@ -84,7 +84,7 @@ function RegisterPage() {
 								placeholder="john@example.com"
 							/>
 							{errors.email && (
-								<p className="text-sm text-destructive font-medium">
+								<p className="text-destructive text-sm font-medium">
 									{errors.email.message}
 								</p>
 							)}
@@ -93,7 +93,7 @@ function RegisterPage() {
 							<Label htmlFor="password">Password</Label>
 							<Input id="password" type="password" {...register("password")} />
 							{errors.password && (
-								<p className="text-sm text-destructive font-medium">
+								<p className="text-destructive text-sm font-medium">
 									{errors.password.message}
 								</p>
 							)}
@@ -106,7 +106,7 @@ function RegisterPage() {
 								{...register("confirmPassword")}
 							/>
 							{errors.confirmPassword && (
-								<p className="text-sm text-destructive font-medium">
+								<p className="text-destructive text-sm font-medium">
 									{errors.confirmPassword.message}
 								</p>
 							)}
@@ -120,7 +120,7 @@ function RegisterPage() {
 						>
 							{isSubmitting ? "Creating account..." : "Register"}
 						</Button>
-						<p className="text-sm text-muted-foreground text-center">
+						<p className="text-muted-foreground text-center text-sm">
 							Already have an account?{" "}
 							<Link
 								to="/login"

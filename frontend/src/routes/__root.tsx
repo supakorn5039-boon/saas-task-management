@@ -51,25 +51,25 @@ function RootComponent() {
 	};
 
 	return (
-		<div className="min-h-screen bg-background font-sans antialiased text-foreground">
-			<header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
-				<div className="container mx-auto px-4 flex h-16 items-center justify-between">
+		<div className="bg-background text-foreground min-h-screen font-sans antialiased">
+			<header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
+				<div className="container mx-auto flex h-16 items-center justify-between px-4">
 					<div className="flex items-center gap-8">
 						<Link
 							to="/"
 							className="flex items-center space-x-2 transition-opacity hover:opacity-80"
 						>
-							<CheckSquare className="h-6 w-6 text-primary" />
-							<span className="font-bold text-lg tracking-tight">
+							<CheckSquare className="text-primary h-6 w-6" />
+							<span className="text-lg font-bold tracking-tight">
 								SaaS Task
 							</span>
 						</Link>
-						<nav className="hidden md:flex items-center space-x-6 text-sm font-medium">
+						<nav className="hidden items-center space-x-6 text-sm font-medium md:flex">
 							{isAuthenticated() ? (
 								<>
 									<Link
 										to="/tasks"
-										className="transition-colors hover:text-primary text-muted-foreground [&.active]:text-foreground [&.active]:font-semibold"
+										className="hover:text-primary text-muted-foreground [&.active]:text-foreground transition-colors [&.active]:font-semibold"
 									>
 										<div className="flex items-center gap-2">
 											<LayoutDashboard className="h-4 w-4" />
@@ -78,7 +78,7 @@ function RootComponent() {
 									</Link>
 									<Link
 										to="/profile"
-										className="transition-colors hover:text-primary text-muted-foreground [&.active]:text-foreground [&.active]:font-semibold"
+										className="hover:text-primary text-muted-foreground [&.active]:text-foreground transition-colors [&.active]:font-semibold"
 									>
 										<div className="flex items-center gap-2">
 											<User className="h-4 w-4" />
@@ -89,7 +89,7 @@ function RootComponent() {
 							) : (
 								<Link
 									to="/"
-									className="transition-colors hover:text-primary text-muted-foreground [&.active]:text-foreground"
+									className="hover:text-primary text-muted-foreground [&.active]:text-foreground transition-colors"
 								>
 									Home
 								</Link>
@@ -99,7 +99,7 @@ function RootComponent() {
 					<div className="flex items-center gap-4">
 						{isAuthenticated() ? (
 							<div className="flex items-center gap-4">
-								<span className="text-sm text-muted-foreground hidden sm:inline">
+								<span className="text-muted-foreground hidden text-sm sm:inline">
 									Welcome,{" "}
 									<span className="text-foreground font-medium">
 										{user?.email}

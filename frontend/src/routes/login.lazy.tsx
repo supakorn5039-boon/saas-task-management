@@ -55,7 +55,7 @@ function LoginPage() {
 		<div className="flex min-h-[calc(100vh-8rem)] items-center justify-center p-4">
 			<Card className="w-full max-w-md">
 				<CardHeader>
-					<CardTitle className="text-2xl font-bold text-center">
+					<CardTitle className="text-center text-2xl font-bold">
 						Login
 					</CardTitle>
 					<CardDescription className="text-center">
@@ -73,7 +73,7 @@ function LoginPage() {
 								placeholder="name@example.com"
 							/>
 							{errors.email && (
-								<p className="text-sm text-destructive font-medium">
+								<p className="text-destructive text-sm font-medium">
 									{errors.email.message}
 								</p>
 							)}
@@ -82,7 +82,7 @@ function LoginPage() {
 							<Label htmlFor="password">Password</Label>
 							<Input id="password" type="password" {...register("password")} />
 							{errors.password && (
-								<p className="text-sm text-destructive font-medium">
+								<p className="text-destructive text-sm font-medium">
 									{errors.password.message}
 								</p>
 							)}
@@ -96,7 +96,7 @@ function LoginPage() {
 						>
 							{isSubmitting ? "Logging in..." : "Login"}
 						</Button>
-						<p className="text-sm text-muted-foreground text-center">
+						<p className="text-muted-foreground text-center text-sm">
 							Don't have an account?{" "}
 							<Link
 								to="/register"
