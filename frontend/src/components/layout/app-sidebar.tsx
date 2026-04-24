@@ -1,8 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { CheckSquare } from "lucide-react";
+import { CheckSquare, LogOut } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -12,6 +13,7 @@ import {
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
+import { useLogout } from "@/hooks/use-logout";
 import { visibleSections, type Role } from "./nav-config";
 
 interface Props {
@@ -21,6 +23,7 @@ interface Props {
 
 export function AppSidebar({ role, currentPath }: Props) {
   const sections = visibleSections(role);
+  const handleLogout = useLogout();
 
   return (
     <Sidebar collapsible="icon">
@@ -64,6 +67,22 @@ export function AppSidebar({ role, currentPath }: Props) {
           </SidebarGroup>
         ))}
       </SidebarContent>
+
+      <SidebarFooter>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              tooltip="Logout"
+              className="text-destructive hover:text-destructive focus-visible:text-destructive active:text-destructive"
+            >
+              <LogOut className="h-4 w-4" />
+              <span>Logout</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+
       <SidebarRail />
     </Sidebar>
   );

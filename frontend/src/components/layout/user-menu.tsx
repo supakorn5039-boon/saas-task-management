@@ -8,16 +8,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useLogout } from "@/hooks/use-logout";
 import { useAuthStore } from "@/store/auth.store";
 
 export function UserMenu() {
   const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
-
-  const handleLogout = () => {
-    logout();
-    navigate({ to: "/login" });
-  };
+  const user = useAuthStore((s) => s.user);
+  const handleLogout = useLogout();
 
   if (!user) return null;
 
