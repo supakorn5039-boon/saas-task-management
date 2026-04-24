@@ -1,140 +1,53 @@
 import {
   createRootRoute,
-  Link,
   Outlet,
   redirect,
-  useNavigate,
+  useLocation,
 } from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/react-router-devtools";
-import { CheckSquare, LayoutDashboard, LogOut, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AppShell } from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/sonner";
 import { useAuthStore } from "@/store/auth.store";
+
+const PUBLIC_ROUTES = ["/", "/login", "/register"];
 
 export const Route = createRootRoute({
   beforeLoad: ({ location }) => {
     const isAuthenticated = useAuthStore.getState().isAuthenticated();
-    const isPublicRoute = ["/", "/login", "/register"].includes(
-      location.pathname,
-    );
+    const isPublic = PUBLIC_ROUTES.includes(location.pathname);
 
-    // Redirect to login if not authenticated and trying to access a protected route
-    if (!isAuthenticated && !isPublicRoute) {
+    if (!isAuthenticated && !isPublic) {
       throw redirect({
         to: "/login",
-        search: {
-          redirect: location.href,
-        },
+        search: { redirect: location.href },
       });
     }
 
-    // Redirect to tasks if authenticated and trying to access login/register
     if (
       isAuthenticated &&
       ["/login", "/register"].includes(location.pathname)
     ) {
-      throw redirect({
-        to: "/tasks",
-      });
+      throw redirect({ to: "/dashboard" });
     }
   },
   component: RootComponent,
 });
 
 function RootComponent() {
-  const navigate = useNavigate();
-  const { isAuthenticated, logout, user } = useAuthStore();
-
-  const handleLogout = () => {
-    logout();
-    navigate({ to: "/login" });
-  };
+  const location = useLocation();
+  const { isAuthenticated } = useAuthStore();
+  const useShell =
+    isAuthenticated() && !PUBLIC_ROUTES.includes(location.pathname);
 
   return (
     <div className="bg-background text-foreground min-h-screen font-sans antialiased">
-      <header className="bg-background/95 supports-backdrop-filter:bg-background/60 sticky top-0 z-50 w-full border-b backdrop-blur">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-8">
-            <Link
-              to="/"
-              className="flex items-center space-x-2 transition-opacity hover:opacity-80"
-            >
-              <CheckSquare className="text-primary h-6 w-6" />
-              <span className="text-lg font-bold tracking-tight">
-                SaaS Task
-              </span>
-            </Link>
-            <nav className="hidden items-center space-x-6 text-sm font-medium md:flex">
-              {isAuthenticated() ? (
-                <>
-                  <Link
-                    to="/tasks"
-                    className="hover:text-primary text-muted-foreground [&.active]:text-foreground transition-colors [&.active]:font-semibold"
-                  >
-                    <div className="flex items-center gap-2">
-                      <LayoutDashboard className="h-4 w-4" />
-                      Tasks
-                    </div>
-                  </Link>
-                  <Link
-                    to="/profile"
-                    className="hover:text-primary text-muted-foreground [&.active]:text-foreground transition-colors [&.active]:font-semibold"
-                  >
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Profile
-                    </div>
-                  </Link>
-                </>
-              ) : (
-                <Link
-                  to="/"
-                  className="hover:text-primary text-muted-foreground [&.active]:text-foreground transition-colors"
-                >
-                  Home
-                </Link>
-              )}
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            {isAuthenticated() ? (
-              <div className="flex items-center gap-4">
-                <span className="text-muted-foreground hidden text-sm sm:inline">
-                  Welcome,{" "}
-                  <span className="text-foreground font-medium">
-                    {user?.email}
-                  </span>
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="gap-2 font-medium"
-                >
-                  <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">Logout</span>
-                </Button>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <Link to="/login">
-                  <Button variant="ghost" size="sm">
-                    Login
-                  </Button>
-                </Link>
-                <Link to="/register">
-                  <Button size="sm">Sign Up</Button>
-                </Link>
-              </div>
-            )}
-          </div>
-        </div>
-      </header>
-      <main className="container mx-auto px-4 py-8">
+      {useShell ? (
+        <AppShell>
+          <Outlet />
+        </AppShell>
+      ) : (
         <Outlet />
-      </main>
+      )}
       <Toaster position="top-right" richColors />
-      <TanStackRouterDevtools />
     </div>
   );
 }
