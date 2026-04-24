@@ -25,7 +25,9 @@ func main() {
 	if len(os.Args) > 1 {
 		switch os.Args[1] {
 		case "seed":
-			seeder.Seed(database.DB)
+			if err := seeder.Seed(database.DB); err != nil {
+				log.Fatalf("seed error: %v", err)
+			}
 		case "migrate:status":
 			migration.Status(database.DB)
 		case "migrate:rollback":
