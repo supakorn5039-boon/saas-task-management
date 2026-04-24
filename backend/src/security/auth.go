@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/supakorn5039-boon/saas-task-backend/src/models"
+	"github.com/supakorn5039-boon/saas-task-backend/src/database/model"
 )
 
 var jwtKey []byte
@@ -17,7 +17,7 @@ func InitJWT(secret string) {
 func GenerateJWT(id uint) (string, error) {
 	expirationTime := time.Now().Add(3 * 24 * time.Hour)
 
-	claims := &models.Claims{
+	claims := &model.Claims{
 		Id: id,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
@@ -29,8 +29,8 @@ func GenerateJWT(id uint) (string, error) {
 	return token.SignedString(jwtKey)
 }
 
-func ValidateToken(tokenString string) (*models.Claims, error) {
-	claims := &models.Claims{}
+func ValidateToken(tokenString string) (*model.Claims, error) {
+	claims := &model.Claims{}
 
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (any, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {

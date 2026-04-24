@@ -2,29 +2,28 @@ package database
 
 import (
 	"fmt"
-	"log"
 
-	"github.com/supakorn5039-boon/saas-task-backend/src/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+
+	"github.com/supakorn5039-boon/saas-task-backend/src/config"
+	"github.com/supakorn5039-boon/saas-task-backend/src/database/migration"
 )
 
-var Db *gorm.DB
+var DB *gorm.DB
 
-func Init(config *config.DatabaseConfig) {
-	host := config.Host
-	port := config.Port
-	password := config.Password
-	dbName := config.Database
-	user := config.User
+func Connect() error {
+	cfg := config.App.Database
+	dsn := fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Bangkok",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database,
+	)
 
-	dsn := fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Bangkok", host, port, user, password, dbName)
-
-	var err error
-
-	Db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
-
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("failed to connect to database: %v", err)
+		return err
 	}
+
+	DB = db
+	return migration.Run(DB)
 }

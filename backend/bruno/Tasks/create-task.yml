@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/tasks"
+  url: "{{dev}}/tasks"
   body:
     type: json
     data: |-
@@ -19,3 +19,6 @@ http:
 
 settings:
   encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5

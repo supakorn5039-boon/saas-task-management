@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: "{{baseUrl}}/auth/login"
+  url: "{{dev}}/auth/login"
   body:
     type: json
     data: |-

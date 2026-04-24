@@ -52,6 +52,7 @@ backend/go.work.sum
 # Go binaries
 backend/main
 backend/migration
+backend/.claude
 *.exe
 *.exe~
 *.dll
