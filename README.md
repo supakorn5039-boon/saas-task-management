@@ -128,6 +128,38 @@ npm run dev
 
 > Frontend runs on `http://localhost:5173`
 
+### 4. Enable the pre-commit hook (one time, per clone)
+
+This repo uses [lefthook](https://github.com/evilmartians/lefthook) — a Go-native
+git hook manager (one binary, no Node.js required).
+
+```bash
+brew install lefthook   # macOS — see lefthook docs for other platforms
+lefthook install        # wires up .git/hooks/pre-commit
+```
+
+**On every `git commit`** (in parallel, only on changed files):
+
+| When                           | Check                              |
+| ------------------------------ | ---------------------------------- |
+| `frontend/src/**/*.{ts,tsx}`   | eslint --fix, prettier, tsc check  |
+| `backend/**/*.go`              | go build, go vet, go test          |
+
+**On every `git push`** (heavier checks):
+
+| Check        | What it does                                |
+| ------------ | ------------------------------------------- |
+| vite-build   | Production build of the frontend            |
+| todo-scan    | Warns on `TODO` / `FIXME` markers           |
+| secret-scan  | Blocks pushes with hardcoded secret patterns |
+
+To run any stage manually:
+
+```bash
+lefthook run pre-commit --all-files
+lefthook run pre-push --all-files
+```
+
 ---
 
 ## Scripts

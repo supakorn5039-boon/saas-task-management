@@ -1,0 +1,76 @@
+# ════════════════════════════════════════════════════════════════
+#  Lefthook — git hook manager (Go-native, replaces husky).
+#  Install hooks once per clone:  lefthook install
+#  Run manually:                  lefthook run pre-commit
+# ════════════════════════════════════════════════════════════════
+
+pre-commit:
+  parallel: true
+  commands:
+
+    # ── Frontend ─────────────────────────────────────────────
+    eslint:
+      glob: "frontend/src/**/*.{ts,tsx}"
+      root: "frontend/"
+      run: npx --no-install eslint --fix --max-warnings=0 {staged_files}
+      stage_fixed: true
+
+    prettier:
+      glob: "frontend/src/**/*.{ts,tsx,js,jsx,json,css,md}"
+      root: "frontend/"
+      run: npx --no-install prettier --write {staged_files}
+      stage_fixed: true
+
+    tsc:
+      glob: "frontend/src/**/*.{ts,tsx}"
+      root: "frontend/"
+      run: npx --no-install tsc -b --noEmit
+
+    # ── Backend ──────────────────────────────────────────────
+    go-build:
+      glob: "backend/**/*.go"
+      root: "backend/"
+      run: go build ./src/...
+
+    go-vet:
+      glob: "backend/**/*.go"
+      root: "backend/"
+      run: go vet ./src/...
+
+    go-test:
+      glob: "backend/**/*.go"
+      root: "backend/"
+      run: |
+        if find ./src -name '*_test.go' -type f | grep -q .; then
+          go test ./src/... -count=1
+        else
+          echo "no *_test.go files — skipping"
+        fi
+
+# ── Pre-push: heavier checks (run once before pushing, not every commit) ──
+pre-push:
+  parallel: true
+  commands:
+
+    vite-build:
+      root: "frontend/"
+      run: npm run build
+
+    todo-scan:
+      run: |
+        count=$(grep -rEn 'TODO|FIXME' --include='*.go' --include='*.ts' --include='*.tsx' \
+          backend/src frontend/src 2>/dev/null \
+          | grep -v '_test.go' | grep -v '\.test\.' | grep -v 'PLANNED:' | wc -l | tr -d ' ')
+        if [ "$count" -gt 0 ]; then
+          echo "⚠ found $count TODO/FIXME (use PLANNED: if intentional)"
+        fi
+
+    secret-scan:
+      run: |
+        count=$(grep -rEn '(api[_-]?key|secret|password)\s*[:=]\s*["'\''`][^"'\''`]{8,}' \
+          --include='*.go' --include='*.ts' --include='*.tsx' \
+          backend/src frontend/src 2>/dev/null | wc -l | tr -d ' ')
+        if [ "$count" -gt 0 ]; then
+          echo "✗ $count suspicious secret literals — review before pushing"
+          exit 1
+        fi
