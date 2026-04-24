@@ -1,21 +1,34 @@
 import api from "@/lib/axios";
+import type {
+  CreateTaskRequest,
+  ListTasksParams,
+  Task,
+  TaskListResponse,
+  TaskStatus,
+} from "@/types/task";
 
-export interface Task {
-  id: number;
-  title: string;
-  description: string;
-  completed: boolean;
-  createdAt: string;
-}
-
-export interface CreateTaskRequest {
-  title: string;
-  description?: string;
-}
+// Query key factory — single source of truth for React Query keys.
+// Hierarchy lets us invalidate everything with `taskKeys.all`.
+export const taskKeys = {
+  all: ["tasks"] as const,
+  lists: () => [...taskKeys.all, "list"] as const,
+  list: (params: ListTasksParams) => [...taskKeys.lists(), params] as const,
+  details: () => [...taskKeys.all, "detail"] as const,
+  detail: (id: number) => [...taskKeys.details(), id] as const,
+};
 
 export const taskService = {
-  getTasks: async (): Promise<Task[]> => {
-    const response = await api.get<Task[]>("/tasks");
+  listTasks: async (params: ListTasksParams): Promise<TaskListResponse> => {
+    const response = await api.get<TaskListResponse>("/tasks", {
+      params: {
+        page: params.page,
+        per_page: params.perPage,
+        status: params.status,
+        search: params.search || undefined,
+        sort: params.sort,
+        order: params.order,
+      },
+    });
     return response.data;
   },
 
@@ -24,8 +37,8 @@ export const taskService = {
     return response.data;
   },
 
-  toggleTask: async (id: number, completed: boolean): Promise<Task> => {
-    const response = await api.patch<Task>(`/tasks/${id}`, { completed });
+  updateStatus: async (id: number, status: TaskStatus): Promise<Task> => {
+    const response = await api.put<Task>(`/tasks/${id}`, { status });
     return response.data;
   },
 
