@@ -24,4 +24,13 @@ export default tseslint.config(
 			],
 		},
 	},
+	{
+		// TanStack Router route files and shadcn/ui components export
+		// non-component values (Route, variants helpers) alongside the
+		// component by design — disable the rule for them.
+		files: ["src/routes/**/*.{ts,tsx}", "src/components/ui/**/*.{ts,tsx}"],
+		rules: {
+			"react-refresh/only-export-components": "off",
+		},
+	},
 );

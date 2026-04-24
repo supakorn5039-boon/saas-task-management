@@ -16,4 +16,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    host: '127.0.0.1',
+    port: 5173,
+    strictPort: true,
+    allowedHosts: ['saas-management.local', 'localhost'],
+    hmr: {
+      host: 'saas-management.local',
+      protocol: 'ws',
+      clientPort: 80,
+    },
+  },
 })
