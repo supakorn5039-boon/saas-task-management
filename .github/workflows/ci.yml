@@ -3,8 +3,25 @@ name: CI
 on:
   push:
     branches: [main, dev]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
   pull_request:
     branches: [main, dev]
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - "LICENSE"
+      - ".gitignore"
+
+# Cancel an in-flight run when a new commit lands on the same branch.
+# Saves minutes on rapid-fire pushes and gives you faster feedback on
+# the latest code.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   backend:
@@ -61,7 +78,9 @@ jobs:
         # set — race-detector compilation roughly doubles CI wall-clock time
         # for limited value on this codebase. Run `go test -race` locally
         # before pushing if you've touched anything goroutine-heavy.
-        run: go test -count=1 -p 1 ./...
+        uses: robherley/go-test-action@v0.6.0
+        with:
+          testArguments: -count=1 -p 1 ./...
 
   frontend:
     name: Frontend (React + Vite)
