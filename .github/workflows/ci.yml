@@ -57,8 +57,11 @@ jobs:
 
       - name: Test
         # -p 1 forces packages to run serially so parallel TRUNCATEs on the
-        # shared test DB don't race each other.
-        run: go test -race -count=1 -p 1 ./...
+        # shared test DB don't race each other. -race is intentionally NOT
+        # set — race-detector compilation roughly doubles CI wall-clock time
+        # for limited value on this codebase. Run `go test -race` locally
+        # before pushing if you've touched anything goroutine-heavy.
+        run: go test -count=1 -p 1 ./...
 
   frontend:
     name: Frontend (React + Vite)

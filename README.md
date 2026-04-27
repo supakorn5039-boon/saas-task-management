@@ -254,7 +254,7 @@ cd backend
 # Make sure docker compose is up + create the test DB once:
 PGPASSWORD=password psql -h localhost -U username -d postgres -c "CREATE DATABASE saas_test;"
 
-go test -race -p 1 ./...   # -p 1 prevents parallel package runs from racing on the shared test DB
+go test -p 1 ./...   # -p 1 prevents parallel package runs from racing on the shared test DB
 ```
 
 Tests live next to the code (Go convention) and run against a real Postgres
@@ -293,7 +293,7 @@ What I've actually built (not just claimed):
 - [x] **No GORM error leaks** — services classify errors, controllers map; only safe messages reach clients. Real errors are logged.
 - [x] **Soft deletes** — GORM's `DeletedAt`; second-delete returns 404.
 - [x] **Self-protection on admin actions** — admin can't demote / deactivate / delete their own account.
-- [x] **CI on every push** — backend (build, vet, test with `-race`) + frontend (lint, type-check, test, build).
+- [x] **CI on every push** — backend (build, vet, test) + frontend (lint, type-check, test, build).
 - [x] **Reversible migrations** with `Down` and a CLI rollback.
 - [x] **Test coverage on critical paths** — auth, task CRUD, admin operations, error envelope.
 
