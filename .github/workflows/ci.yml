@@ -80,6 +80,7 @@ jobs:
         # before pushing if you've touched anything goroutine-heavy.
         uses: robherley/go-test-action@v0.6.0
         with:
+          moduleDirectory: backend
           testArguments: -count=1 -p 1 ./...
 
   frontend:
