@@ -24,9 +24,11 @@ func MountAPIWebServer(r *gin.Engine) {
 	// Conservative security headers on every response (XCTO, XFO, etc).
 	r.Use(middleware.SecurityHeaders())
 
-	// Apply CORS
+	// Apply CORS — allow-list comes from FRONTEND_URL (comma-separated). In
+	// prod set it to your deployed frontend URL, e.g.
+	// FRONTEND_URL="https://your-app.vercel.app".
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:5173", "http://saas-management.local"},
+		AllowOrigins:     config.App.CORS.AllowedOrigins,
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", middleware.RequestIDHeader},
 		ExposeHeaders:    []string{"Content-Length", middleware.RequestIDHeader},

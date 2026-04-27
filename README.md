@@ -307,6 +307,14 @@ What's intentionally **not** in this iteration (with the rationale):
 
 ---
 
+## Deploying for free
+
+See [`docs/DEPLOY.md`](docs/DEPLOY.md) for a step-by-step guide using
+**Vercel** (frontend) + **Render** (backend) + **Neon** (Postgres).
+All free tier, no credit card required.
+
+---
+
 ## Decisions worth reading
 
 These ADRs explain the choices that aren't obvious from the code:

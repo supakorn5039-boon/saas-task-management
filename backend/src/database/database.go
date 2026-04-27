@@ -13,12 +13,7 @@ import (
 var DB *gorm.DB
 
 func Connect() error {
-	cfg := config.App.Database
-	dsn := fmt.Sprintf(
-		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=Asia/Bangkok",
-		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database,
-	)
-
+	dsn := buildDSN(config.App.Database)
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return err
@@ -26,4 +21,17 @@ func Connect() error {
 
 	DB = db
 	return migration.Run(DB)
+}
+
+// buildDSN prefers DATABASE_URL when set (cloud Postgres providers like Neon,
+// Supabase, Render hand out a DSN directly). Falls back to assembling one from
+// discrete fields for local docker-compose dev.
+func buildDSN(cfg config.DatabaseConfig) string {
+	if cfg.DSN != "" {
+		return cfg.DSN
+	}
+	return fmt.Sprintf(
+		"host=%s port=%d user=%s password=%s dbname=%s sslmode=disable TimeZone=UTC",
+		cfg.Host, cfg.Port, cfg.User, cfg.Password, cfg.Database,
+	)
 }
