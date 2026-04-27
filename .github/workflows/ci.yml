@@ -1,71 +1,90 @@
 name: CI
 
 on:
-   push:
-      branches: [main, dev]
-   pull_request:
-      branches: [main, dev]
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
 
 jobs:
-   backend:
-      name: Backend - Go CI
-      runs-on: ubuntu-latest
+  backend:
+    name: Backend (Go)
+    runs-on: ubuntu-latest
 
-      services:
-         postgres:
-            image: postgres:17
-            env:
-               POSTGRES_USER: username
-               POSTGRES_PASSWORD: password
-               POSTGRES_DB: postgres
-            ports:
-               - 5432:5432
-            options: >-
-               --health-cmd pg_isready
-               --health-interval 10s
-               --health-timeout 5s
-               --health-retries 5
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: username
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
-      defaults:
-         run:
-            working-directory: backend
+    defaults:
+      run:
+        working-directory: backend
 
-      steps:
-         - uses: actions/checkout@v4
+    env:
+      DATABASE_URL_TEST: host=localhost port=5432 user=username password=password dbname=saas_test sslmode=disable TimeZone=UTC
 
-         - name: Set up Go
-           uses: actions/setup-go@v5
-           with:
-              go-version: 1.25.x
-              cache-dependency-path: backend/go.sum
+    steps:
+      - uses: actions/checkout@v4
 
-         - name: Tidy Go modules
-           run: go mod tidy
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 1.25.x
+          cache-dependency-path: backend/go.sum
 
-         - name: Backend Build
-           run: go build ./...
+      - name: Create test database
+        run: PGPASSWORD=password psql -h localhost -U username -d postgres -c "CREATE DATABASE saas_test;"
 
-         - name: Backend Test
-           run: go test ./...
+      - name: Build
+        run: go build ./...
 
-   frontend:
-      name: Frontend - React CI
-      runs-on: ubuntu-latest
+      - name: Vet
+        run: go vet ./...
 
-      defaults:
-         run:
-            working-directory: frontend
+      - name: Test
+        # -p 1 forces packages to run serially so parallel TRUNCATEs on the
+        # shared test DB don't race each other.
+        run: go test -race -count=1 -p 1 ./...
 
-      steps:
-         - uses: actions/checkout@v4
+  frontend:
+    name: Frontend (React + Vite)
+    runs-on: ubuntu-latest
 
-         - name: Set up Node.js
-           uses: actions/setup-node@v4
-           with:
-              node-version: 22
+    defaults:
+      run:
+        working-directory: frontend
 
-         - name: Frontend Install
-           run: npm install
+    steps:
+      - uses: actions/checkout@v4
 
-         - name: Frontend Build
-           run: npm run build
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run type-check
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
