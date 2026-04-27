@@ -32,6 +32,10 @@ jobs:
 
     env:
       DATABASE_URL_TEST: host=localhost port=5432 user=username password=password dbname=saas_test sslmode=disable TimeZone=UTC
+      # bcrypt cost 14 takes ~1s per hash. With ~50 Register/Login calls
+      # across the test suite, that's ~minutes on its own. Cost 4 (MinCost)
+      # takes ~1ms. Production keeps cost 14 — see security/password_encryption.go.
+      BCRYPT_COST: "4"
 
     steps:
       - uses: actions/checkout@v4
