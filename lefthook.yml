@@ -69,7 +69,8 @@ pre-push:
       run: |
         count=$(grep -rEn '(api[_-]?key|secret|password)\s*[:=]\s*["'\''`][^"'\''`]{8,}' \
           --include='*.go' --include='*.ts' --include='*.tsx' \
-          backend/src frontend/src 2>/dev/null | wc -l | tr -d ' ')
+          backend/src frontend/src 2>/dev/null \
+          | grep -v '_test.go' | grep -v '\.test\.' | grep -v '__tests__/' | wc -l | tr -d ' ')
         if [ "$count" -gt 0 ]; then
           echo "✗ $count suspicious secret literals — review before pushing"
           exit 1

@@ -15,7 +15,10 @@ FROM alpine:3.21
 WORKDIR /app
 
 COPY --from=builder /app/bin/saas-task-backend ./saas-task-backend
-COPY --from=builder /app/config.ini ./config.ini
+# config.ini is gitignored so we can't copy it at build time. Ship the example
+# baked in; the real config is mounted in via docker-compose at runtime, or
+# secrets can be provided via JWT_SECRET / DB_* env vars (see config.go).
+COPY --from=builder /app/config.example.ini ./config.ini
 
 EXPOSE 8080
 

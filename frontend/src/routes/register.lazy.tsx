@@ -3,7 +3,6 @@ import { createLazyFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { isAxiosError } from "axios";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,22 +14,12 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getApiError } from "@/lib/api-error";
 import { authService } from "@/services/auth.service";
-
-const registerSchema = z
-  .object({
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-    confirmPassword: z
-      .string()
-      .min(6, "Confirm password must be at least 6 characters"),
-  })
-  .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
-    path: ["confirmPassword"],
-  });
-
-type RegisterForm = z.infer<typeof registerSchema>;
+import {
+  registerSchema,
+  type RegisterInput,
+} from "@/validators/auth.validator";
 
 export const Route = createLazyFileRoute("/register")({
   component: RegisterPage,
@@ -41,12 +30,13 @@ function RegisterPage() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
-  } = useForm<RegisterForm>({
+  } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
   });
 
-  const onSubmit = async (data: RegisterForm) => {
+  const onSubmit = async (data: RegisterInput) => {
     try {
       await authService.register({
         email: data.email,
@@ -55,10 +45,14 @@ function RegisterPage() {
       toast.success("Account created successfully");
       navigate({ to: "/tasks" });
     } catch (error) {
-      const message = isAxiosError(error)
-        ? error.response?.data?.error
-        : undefined;
-      toast.error(message || "Failed to register");
+      const message = getApiError(error, "Failed to register");
+      // 409 = email already taken; show inline on the email field so the user
+      // knows exactly which field to change.
+      if (isAxiosError(error) && error.response?.status === 409) {
+        setError("email", { message });
+        return;
+      }
+      toast.error(message);
     }
   };
 

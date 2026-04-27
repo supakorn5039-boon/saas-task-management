@@ -1,9 +1,15 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/supakorn5039-boon/saas-task-backend/src/config"
@@ -12,6 +18,8 @@ import (
 	"github.com/supakorn5039-boon/saas-task-backend/src/database/seeder"
 	"github.com/supakorn5039-boon/saas-task-backend/src/pkg"
 )
+
+const shutdownTimeout = 15 * time.Second
 
 func main() {
 	if err := config.Load("config.ini"); err != nil {
@@ -48,11 +56,37 @@ func main() {
 		gin.SetMode(gin.ReleaseMode)
 	}
 
-	r := gin.Default()
+	// gin.New() (not gin.Default()) so we can plug in our own structured request
+	// logger via pkg.MountAPIWebServer; we still want the panic-recovery middleware.
+	r := gin.New()
+	r.Use(gin.Recovery())
 	pkg.MountAPIWebServer(r)
 
-	log.Printf("starting http server on :%d", config.App.Server.Port)
-	if err := r.Run(fmt.Sprintf(":%d", config.App.Server.Port)); err != nil {
-		log.Fatalf("server error: %v", err)
+	srv := &http.Server{
+		Addr:              fmt.Sprintf(":%d", config.App.Server.Port),
+		Handler:           r,
+		ReadHeaderTimeout: 5 * time.Second,
 	}
+
+	// Run the server in a goroutine so the main goroutine can wait for SIGTERM
+	// and trigger a graceful shutdown — drains in-flight requests instead of
+	// dropping them when the pod gets killed.
+	go func() {
+		log.Printf("starting http server on %s", srv.Addr)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-stop
+	log.Printf("received %s, shutting down...", sig)
+
+	ctx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		log.Fatalf("forced shutdown: %v", err)
+	}
+	log.Println("server stopped cleanly")
 }

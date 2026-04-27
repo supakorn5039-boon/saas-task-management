@@ -5,7 +5,13 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import { taskKeys, taskService } from "@/services/task.service";
-import type { ListTasksParams, TaskStatus } from "@/types/task";
+import type {
+  ListTasksParams,
+  Task,
+  TaskListResponse,
+  TaskStatus,
+  UpdateTaskRequest,
+} from "@/types/task";
 
 // Shared invalidator — every task mutation runs this on success.
 // Centralizing it means there's one place to change cache behavior
@@ -34,12 +40,47 @@ export function useCreateTask() {
   });
 }
 
-export function useUpdateTaskStatus() {
+export function useUpdateTask() {
   const invalidate = useInvalidateTasks();
+  return useMutation({
+    mutationFn: ({ id, data }: { id: number; data: UpdateTaskRequest }) =>
+      taskService.updateTask(id, data),
+    onSuccess: invalidate,
+  });
+}
+
+// Status flip is the most-common interaction — give it instant feedback by
+// patching every cached list page in place, then roll back if the server rejects.
+type ListSnapshots = [readonly unknown[], TaskListResponse | undefined][];
+
+export function useUpdateTaskStatus() {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, status }: { id: number; status: TaskStatus }) =>
       taskService.updateStatus(id, status),
-    onSuccess: invalidate,
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: taskKeys.lists() });
+
+      const snapshots: ListSnapshots = qc.getQueriesData<TaskListResponse>({
+        queryKey: taskKeys.lists(),
+      });
+
+      for (const [key, value] of snapshots) {
+        if (!value) continue;
+        qc.setQueryData<TaskListResponse>(key, {
+          ...value,
+          data: value.data.map((t: Task) =>
+            t.id === id ? { ...t, status } : t,
+          ),
+        });
+      }
+      return { snapshots };
+    },
+    onError: (_err, _vars, context) => {
+      // Restore every page we patched.
+      context?.snapshots.forEach(([key, value]) => qc.setQueryData(key, value));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: taskKeys.all }),
   });
 }
 

@@ -1,9 +1,6 @@
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
+export type Role = "admin" | "manager" | "user";
 
-export interface RegisterRequest {
+export interface Credentials {
   email: string;
   password: string;
 }
@@ -19,4 +16,5 @@ export interface UserProfile {
   email: string;
   role: string;
   status: number;
+  createdAt?: string;
 }

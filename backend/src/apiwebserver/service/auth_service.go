@@ -2,8 +2,8 @@ package service
 
 import (
 	"errors"
-	"fmt"
 
+	"github.com/supakorn5039-boon/saas-task-backend/src/apperror"
 	"github.com/supakorn5039-boon/saas-task-backend/src/database"
 	"github.com/supakorn5039-boon/saas-task-backend/src/database/model"
 	"github.com/supakorn5039-boon/saas-task-backend/src/security"
@@ -21,11 +21,14 @@ func NewAuthService() *AuthService {
 func (s *AuthService) Login(email, password string) (*model.UserDto, error) {
 	var user model.User
 	if err := s.db.First(&user, "email = ?", email).Error; err != nil {
-		return nil, errors.New("invalid email or password")
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperror.Unauthorized("invalid email or password")
+		}
+		return nil, apperror.Wrap(err, 500, "login failed")
 	}
 
 	if !security.VerifyPassword(user.Password, password) {
-		return nil, errors.New("invalid email or password")
+		return nil, apperror.Unauthorized("invalid email or password")
 	}
 
 	return user.ToDto(), nil
@@ -33,13 +36,17 @@ func (s *AuthService) Login(email, password string) (*model.UserDto, error) {
 
 func (s *AuthService) Register(email, password string) (*model.UserDto, error) {
 	var existing model.User
-	if err := s.db.First(&existing, "email = ?", email).Error; err == nil {
-		return nil, fmt.Errorf("email already exists")
+	err := s.db.First(&existing, "email = ?", email).Error
+	if err == nil {
+		return nil, apperror.Conflict("email already exists")
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, apperror.Wrap(err, 500, "register failed")
 	}
 
 	hashedPassword, err := security.HashPassword(password)
 	if err != nil {
-		return nil, fmt.Errorf("failed to hash password: %v", err)
+		return nil, apperror.Wrap(err, 500, "register failed")
 	}
 
 	newUser := model.User{
@@ -50,7 +57,7 @@ func (s *AuthService) Register(email, password string) (*model.UserDto, error) {
 	}
 
 	if err := s.db.Create(&newUser).Error; err != nil {
-		return nil, fmt.Errorf("failed to create user: %v", err)
+		return nil, apperror.Wrap(err, 500, "register failed")
 	}
 
 	return newUser.ToDto(), nil

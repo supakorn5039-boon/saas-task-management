@@ -4,7 +4,7 @@ info:
   seq: 3
 
 http:
-  method: PATCH
+  method: PUT
   url: "{{baseUrl}}/tasks/:id"
   params:
     - name: id
@@ -14,11 +14,17 @@ http:
     type: json
     data: |-
       {
-        "completed": true
+        "title": "Updated title",
+        "description": "Optional new description",
+        "status": "in_progress"
       }
   auth:
     type: bearer
     token: "{{token}}"
+
+docs: |
+  All three fields (title, description, status) are optional — send any subset.
+  Status must be one of: todo, in_progress, done.
 
 settings:
   encodeUrl: true

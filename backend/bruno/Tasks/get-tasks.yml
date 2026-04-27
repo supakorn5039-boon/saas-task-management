@@ -5,7 +5,32 @@ info:
 
 http:
   method: GET
-  url: "{{dev}}/tasks"
+  url: "{{baseUrl}}/tasks"
+  params:
+    - name: page
+      value: "1"
+      type: query
+      enabled: true
+    - name: per_page
+      value: "10"
+      type: query
+      enabled: true
+    - name: status
+      value: "todo"
+      type: query
+      enabled: false
+    - name: search
+      value: ""
+      type: query
+      enabled: false
+    - name: sort
+      value: "created_at"
+      type: query
+      enabled: false
+    - name: order
+      value: "desc"
+      type: query
+      enabled: false
   auth:
     type: bearer
     token: "{{token}}"

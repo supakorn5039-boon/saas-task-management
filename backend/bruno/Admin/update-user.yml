@@ -1,0 +1,31 @@
+info:
+  name: Update User (admin)
+  type: http
+  seq: 2
+
+http:
+  method: PUT
+  url: "{{baseUrl}}/admin/users/:id"
+  params:
+    - name: id
+      value: "2"
+      type: path
+  body:
+    type: json
+    data: |-
+      {
+        "role": "manager",
+        "status": 1
+      }
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+docs: |
+  Admin-only. Both fields are optional — send any subset.
+  role: "admin" | "manager" | "user"
+  status: 1 (active) | 0 (inactive)
+  An admin cannot demote themselves out of admin or deactivate themselves.
+
+settings:
+  encodeUrl: true

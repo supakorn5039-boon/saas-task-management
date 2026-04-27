@@ -1,0 +1,39 @@
+info:
+  name: List Users (admin)
+  type: http
+  seq: 1
+
+http:
+  method: GET
+  url: "{{baseUrl}}/admin/users"
+  params:
+    - name: page
+      value: "1"
+      type: query
+      enabled: true
+    - name: per_page
+      value: "10"
+      type: query
+      enabled: true
+    - name: search
+      value: ""
+      type: query
+      enabled: false
+    - name: sort
+      value: "created_at"
+      type: query
+      enabled: false
+    - name: order
+      value: "desc"
+      type: query
+      enabled: false
+  auth:
+    type: bearer
+    token: "{{token}}"
+
+docs: |
+  Admin-only. Returns paginated users with email/role/status/createdAt.
+  Sort columns: created_at, email, role, status.
+
+settings:
+  encodeUrl: true

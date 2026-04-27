@@ -8,7 +8,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuthStore } from "@/store/auth.store";
+import { selectUser, useAuthStore } from "@/store/auth.store";
 import type { Role } from "./nav-config";
 
 interface Props {
@@ -16,7 +16,7 @@ interface Props {
 }
 
 export function AppShell({ children }: Props) {
-  const { user } = useAuthStore();
+  const user = useAuthStore(selectUser);
   const location = useLocation();
 
   return (

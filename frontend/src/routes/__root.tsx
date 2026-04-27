@@ -6,27 +6,37 @@ import {
 } from "@tanstack/react-router";
 import { AppShell } from "@/components/layout/app-shell";
 import { Toaster } from "@/components/ui/sonner";
-import { useAuthStore } from "@/store/auth.store";
+import {
+  isAuthenticated,
+  selectIsAuthenticated,
+  useAuthStore,
+} from "@/store/auth.store";
 
 const PUBLIC_ROUTES = ["/", "/login", "/register"];
+const ADMIN_ROUTES = ["/users"];
+
+const isPublic = (path: string) => PUBLIC_ROUTES.includes(path);
+const isAdminRoute = (path: string) =>
+  ADMIN_ROUTES.some((p) => path === p || path.startsWith(p + "/"));
 
 export const Route = createRootRoute({
   beforeLoad: ({ location }) => {
-    const isAuthenticated = useAuthStore.getState().isAuthenticated();
-    const isPublic = PUBLIC_ROUTES.includes(location.pathname);
+    const authed = isAuthenticated();
 
-    if (!isAuthenticated && !isPublic) {
+    if (!authed && !isPublic(location.pathname)) {
       throw redirect({
         to: "/login",
         search: { redirect: location.href },
       });
     }
-
-    if (
-      isAuthenticated &&
-      ["/login", "/register"].includes(location.pathname)
-    ) {
+    if (authed && ["/login", "/register"].includes(location.pathname)) {
       throw redirect({ to: "/dashboard" });
+    }
+    if (authed && isAdminRoute(location.pathname)) {
+      const role = useAuthStore.getState().user?.role;
+      if (role !== "admin") {
+        throw redirect({ to: "/dashboard" });
+      }
     }
   },
   component: RootComponent,
@@ -34,9 +44,8 @@ export const Route = createRootRoute({
 
 function RootComponent() {
   const location = useLocation();
-  const { isAuthenticated } = useAuthStore();
-  const useShell =
-    isAuthenticated() && !PUBLIC_ROUTES.includes(location.pathname);
+  const authed = useAuthStore(selectIsAuthenticated);
+  const useShell = authed && !isPublic(location.pathname);
 
   return (
     <div className="bg-background text-foreground min-h-screen font-sans antialiased">

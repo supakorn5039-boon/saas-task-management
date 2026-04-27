@@ -1,6 +1,6 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { Trash2 } from "lucide-react";
-import { DataTableSortHeader } from "@/components/data-table/data-table-sort-header";
+import { Pencil, Trash2 } from "lucide-react";
+import { DataTableSortHeader } from "@/components/shared/data-table/data-table-sort-header";
 import { TaskStatusBadge } from "@/components/tasks/task-status-badge";
 import { TaskStatusSelect } from "@/components/tasks/task-status-select";
 import { Button } from "@/components/ui/button";
@@ -9,11 +9,13 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { formatRelative } from "@/lib/date";
 import type { Task, TaskStatus } from "@/types/task";
 
 export interface TaskColumnHandlers {
   onStatusChange: (id: number, status: TaskStatus) => void;
-  onDelete: (id: number) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (task: Task) => void;
 }
 
 export function buildTaskColumns(
@@ -68,7 +70,7 @@ export function buildTaskColumns(
       meta: { className: "w-32" },
       cell: ({ row }) => (
         <span className="text-muted-foreground text-sm">
-          {formatDate(row.original.createdAt)}
+          {formatRelative(row.original.createdAt)}
         </span>
       ),
     },
@@ -76,7 +78,7 @@ export function buildTaskColumns(
       id: "actions",
       header: () => <div className="text-right">Actions</div>,
       enableSorting: false,
-      meta: { className: "w-32 text-right" },
+      meta: { className: "w-44 text-right" },
       cell: ({ row }) => {
         const task = row.original;
         const status = task.status ?? "todo";
@@ -93,7 +95,23 @@ export function buildTaskColumns(
                   <Button
                     variant="ghost"
                     size="icon"
-                    onClick={() => handlers.onDelete(task.id)}
+                    onClick={() => handlers.onEdit(task)}
+                    className="text-muted-foreground hover:text-foreground h-8 w-8"
+                    aria-label="Edit task"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                }
+              />
+              <TooltipContent>Edit task</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handlers.onDelete(task)}
                     className="text-muted-foreground hover:text-destructive h-8 w-8"
                     aria-label="Delete task"
                   >
@@ -108,18 +126,4 @@ export function buildTaskColumns(
       },
     },
   ];
-}
-
-function formatDate(iso: string): string {
-  const date = new Date(iso);
-  const now = new Date();
-  const diff = now.getTime() - date.getTime();
-  const minutes = Math.floor(diff / 60_000);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
 }

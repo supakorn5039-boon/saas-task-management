@@ -1,6 +1,9 @@
 package service
 
 import (
+	"errors"
+
+	"github.com/supakorn5039-boon/saas-task-backend/src/apperror"
 	"github.com/supakorn5039-boon/saas-task-backend/src/database"
 	"github.com/supakorn5039-boon/saas-task-backend/src/database/model"
 	"gorm.io/gorm"
@@ -44,7 +47,7 @@ func (s *TaskService) ListTasks(opts ListTasksOptions) (*model.TaskListResponse,
 
 	var total int64
 	if err := q.Count(&total).Error; err != nil {
-		return nil, err
+		return nil, apperror.Wrap(err, 500, "failed to count tasks")
 	}
 
 	sortCol, ok := allowedSortColumns[opts.Sort]
@@ -62,7 +65,7 @@ func (s *TaskService) ListTasks(opts ListTasksOptions) (*model.TaskListResponse,
 		Offset((opts.Page - 1) * opts.PerPage).
 		Find(&tasks).Error
 	if err != nil {
-		return nil, err
+		return nil, apperror.Wrap(err, 500, "failed to list tasks")
 	}
 
 	dtos := make([]*model.TaskDto, len(tasks))
@@ -93,7 +96,7 @@ func (s *TaskService) statusCounts(userID uint) (model.TaskListCounts, error) {
 		Group("status").
 		Find(&rows).Error
 	if err != nil {
-		return model.TaskListCounts{}, err
+		return model.TaskListCounts{}, apperror.Wrap(err, 500, "failed to count tasks by status")
 	}
 
 	out := model.TaskListCounts{}
@@ -119,23 +122,51 @@ func (s *TaskService) CreateTask(userID uint, title, description string) (*model
 		Status:      model.TaskStatusTodo,
 	}
 	if err := s.db.Create(&task).Error; err != nil {
-		return nil, err
+		return nil, apperror.Wrap(err, 500, "failed to create task")
 	}
 	return task.ToDto(), nil
 }
 
-func (s *TaskService) UpdateStatus(userID uint, taskID uint, status model.TaskStatus) (*model.TaskDto, error) {
+// UpdateTaskInput carries the fields that may be patched on a task. All
+// pointer-typed so the service can tell "absent" from "set to empty/zero".
+type UpdateTaskInput struct {
+	Title       *string
+	Description *string
+	Status      *model.TaskStatus
+}
+
+func (s *TaskService) UpdateTask(userID uint, taskID uint, in UpdateTaskInput) (*model.TaskDto, error) {
 	var task model.Task
 	if err := s.db.Where("id = ? AND user_id = ?", taskID, userID).First(&task).Error; err != nil {
-		return nil, err
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, apperror.NotFound("task not found")
+		}
+		return nil, apperror.Wrap(err, 500, "failed to load task")
 	}
-	task.Status = status
+
+	if in.Title != nil {
+		task.Title = *in.Title
+	}
+	if in.Description != nil {
+		task.Description = *in.Description
+	}
+	if in.Status != nil {
+		task.Status = *in.Status
+	}
+
 	if err := s.db.Save(&task).Error; err != nil {
-		return nil, err
+		return nil, apperror.Wrap(err, 500, "failed to update task")
 	}
 	return task.ToDto(), nil
 }
 
 func (s *TaskService) DeleteTask(userID uint, taskID uint) error {
-	return s.db.Where("id = ? AND user_id = ?", taskID, userID).Delete(&model.Task{}).Error
+	result := s.db.Where("id = ? AND user_id = ?", taskID, userID).Delete(&model.Task{})
+	if result.Error != nil {
+		return apperror.Wrap(result.Error, 500, "failed to delete task")
+	}
+	if result.RowsAffected == 0 {
+		return apperror.NotFound("task not found")
+	}
+	return nil
 }

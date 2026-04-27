@@ -12,7 +12,9 @@ import { createFileRoute } from '@tanstack/react-router'
 
 import { Route as rootRouteImport } from './routes/__root'
 
+const UsersLazyRouteImport = createFileRoute('/users')()
 const TasksLazyRouteImport = createFileRoute('/tasks')()
+const SettingsLazyRouteImport = createFileRoute('/settings')()
 const RegisterLazyRouteImport = createFileRoute('/register')()
 const ProfileLazyRouteImport = createFileRoute('/profile')()
 const LoginLazyRouteImport = createFileRoute('/login')()
@@ -20,11 +22,21 @@ const DashboardLazyRouteImport = createFileRoute('/dashboard')()
 const AboutLazyRouteImport = createFileRoute('/about')()
 const IndexLazyRouteImport = createFileRoute('/')()
 
+const UsersLazyRoute = UsersLazyRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/users.lazy').then((d) => d.Route))
 const TasksLazyRoute = TasksLazyRouteImport.update({
   id: '/tasks',
   path: '/tasks',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/tasks.lazy').then((d) => d.Route))
+const SettingsLazyRoute = SettingsLazyRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/settings.lazy').then((d) => d.Route))
 const RegisterLazyRoute = RegisterLazyRouteImport.update({
   id: '/register',
   path: '/register',
@@ -63,7 +75,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginLazyRoute
   '/profile': typeof ProfileLazyRoute
   '/register': typeof RegisterLazyRoute
+  '/settings': typeof SettingsLazyRoute
   '/tasks': typeof TasksLazyRoute
+  '/users': typeof UsersLazyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
@@ -72,7 +86,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginLazyRoute
   '/profile': typeof ProfileLazyRoute
   '/register': typeof RegisterLazyRoute
+  '/settings': typeof SettingsLazyRoute
   '/tasks': typeof TasksLazyRoute
+  '/users': typeof UsersLazyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -82,7 +98,9 @@ export interface FileRoutesById {
   '/login': typeof LoginLazyRoute
   '/profile': typeof ProfileLazyRoute
   '/register': typeof RegisterLazyRoute
+  '/settings': typeof SettingsLazyRoute
   '/tasks': typeof TasksLazyRoute
+  '/users': typeof UsersLazyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -93,7 +111,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/register'
+    | '/settings'
     | '/tasks'
+    | '/users'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -102,7 +122,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/register'
+    | '/settings'
     | '/tasks'
+    | '/users'
   id:
     | '__root__'
     | '/'
@@ -111,7 +133,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/profile'
     | '/register'
+    | '/settings'
     | '/tasks'
+    | '/users'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -121,16 +145,32 @@ export interface RootRouteChildren {
   LoginLazyRoute: typeof LoginLazyRoute
   ProfileLazyRoute: typeof ProfileLazyRoute
   RegisterLazyRoute: typeof RegisterLazyRoute
+  SettingsLazyRoute: typeof SettingsLazyRoute
   TasksLazyRoute: typeof TasksLazyRoute
+  UsersLazyRoute: typeof UsersLazyRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/tasks': {
       id: '/tasks'
       path: '/tasks'
       fullPath: '/tasks'
       preLoaderRoute: typeof TasksLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/register': {
@@ -185,7 +225,9 @@ const rootRouteChildren: RootRouteChildren = {
   LoginLazyRoute: LoginLazyRoute,
   ProfileLazyRoute: ProfileLazyRoute,
   RegisterLazyRoute: RegisterLazyRoute,
+  SettingsLazyRoute: SettingsLazyRoute,
   TasksLazyRoute: TasksLazyRoute,
+  UsersLazyRoute: UsersLazyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

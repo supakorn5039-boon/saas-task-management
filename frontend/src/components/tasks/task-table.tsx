@@ -5,11 +5,10 @@ import {
   type ColumnMeta,
   type SortingState,
 } from "@tanstack/react-table";
-import { Search } from "lucide-react";
 import { useMemo } from "react";
-import { DataTablePagination } from "@/components/data-table/data-table-pagination";
+import { DataTablePagination } from "@/components/shared/data-table/data-table-pagination";
+import { TaskToolbar } from "@/components/tasks/task-toolbar";
 import { buildTaskColumns } from "@/components/tasks/task-columns";
-import { Input } from "@/components/ui/input";
 import {
   Table,
   TableBody,
@@ -18,10 +17,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TASK_STATUS_LABEL, TASK_STATUSES } from "@/constants/task";
 import type {
-  SortOrder,
+  TaskListActions,
+  TaskListState,
+} from "@/hooks/use-task-list-state";
+import type {
   Task,
   TaskListCounts,
   TaskListMeta,
@@ -29,53 +29,43 @@ import type {
   TaskStatus,
 } from "@/types/task";
 
-interface SortState {
-  field: TaskSortField;
-  order: SortOrder;
-}
-
 interface Props {
   tasks: Task[];
   meta: TaskListMeta;
   counts: TaskListCounts;
-  statusFilter: TaskStatus | undefined;
-  search: string;
-  sort: SortState;
-  onStatusFilterChange: (status: TaskStatus | undefined) => void;
-  onSearchChange: (search: string) => void;
-  onSortChange: (sort: SortState) => void;
-  onPageChange: (page: number) => void;
-  onPerPageChange: (perPage: number) => void;
+  state: TaskListState;
+  actions: TaskListActions;
   onTaskStatusChange: (id: number, status: TaskStatus) => void;
-  onTaskDelete: (id: number) => void;
+  onTaskEdit: (task: Task) => void;
+  onTaskDelete: (task: Task) => void;
 }
+
+// Type-safe accessor for the optional `className` we tag on column meta —
+// avoids repeating the `as` cast in both header and cell loops below.
+type ColumnClassMeta = ColumnMeta<Task, unknown> & { className?: string };
 
 export function TaskTable({
   tasks,
   meta,
   counts,
-  statusFilter,
-  search,
-  sort,
-  onStatusFilterChange,
-  onSearchChange,
-  onSortChange,
-  onPageChange,
-  onPerPageChange,
+  state,
+  actions,
   onTaskStatusChange,
+  onTaskEdit,
   onTaskDelete,
 }: Props) {
   const columns = useMemo(
     () =>
       buildTaskColumns({
         onStatusChange: onTaskStatusChange,
+        onEdit: onTaskEdit,
         onDelete: onTaskDelete,
       }),
-    [onTaskStatusChange, onTaskDelete],
+    [onTaskStatusChange, onTaskEdit, onTaskDelete],
   );
 
   const sorting: SortingState = [
-    { id: sort.field, desc: sort.order === "desc" },
+    { id: state.sort.field, desc: state.sort.order === "desc" },
   ];
 
   const table = useReactTable({
@@ -86,7 +76,7 @@ export function TaskTable({
       const next = typeof updater === "function" ? updater(sorting) : updater;
       const first = next[0];
       if (!first) return;
-      onSortChange({
+      actions.setSort({
         field: first.id as TaskSortField,
         order: first.desc ? "desc" : "asc",
       });
@@ -101,10 +91,10 @@ export function TaskTable({
     <div className="space-y-4">
       <TaskToolbar
         counts={counts}
-        statusFilter={statusFilter}
-        search={search}
-        onStatusFilterChange={onStatusFilterChange}
-        onSearchChange={onSearchChange}
+        statusFilter={state.status}
+        search={state.search}
+        onStatusFilterChange={actions.setStatus}
+        onSearchChange={actions.setSearch}
       />
 
       <div className="overflow-hidden rounded-lg border">
@@ -113,11 +103,11 @@ export function TaskTable({
             {table.getHeaderGroups().map((group) => (
               <TableRow key={group.id}>
                 {group.headers.map((header) => {
-                  const meta = header.column.columnDef.meta as
-                    | (ColumnMeta<Task, unknown> & { className?: string })
+                  const m = header.column.columnDef.meta as
+                    | ColumnClassMeta
                     | undefined;
                   return (
-                    <TableHead key={header.id} className={meta?.className}>
+                    <TableHead key={header.id} className={m?.className}>
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -144,11 +134,11 @@ export function TaskTable({
               table.getRowModel().rows.map((row) => (
                 <TableRow key={row.id} className="group">
                   {row.getVisibleCells().map((cell) => {
-                    const meta = cell.column.columnDef.meta as
-                      | (ColumnMeta<Task, unknown> & { className?: string })
+                    const m = cell.column.columnDef.meta as
+                      | ColumnClassMeta
                       | undefined;
                     return (
-                      <TableCell key={cell.id} className={meta?.className}>
+                      <TableCell key={cell.id} className={m?.className}>
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
@@ -167,58 +157,9 @@ export function TaskTable({
         page={meta.page}
         perPage={meta.perPage}
         total={meta.total}
-        onPageChange={onPageChange}
-        onPerPageChange={onPerPageChange}
+        onPageChange={actions.setPage}
+        onPerPageChange={actions.setPerPage}
       />
-    </div>
-  );
-}
-
-function TaskToolbar({
-  counts,
-  statusFilter,
-  search,
-  onStatusFilterChange,
-  onSearchChange,
-}: {
-  counts: TaskListCounts;
-  statusFilter: TaskStatus | undefined;
-  search: string;
-  onStatusFilterChange: (status: TaskStatus | undefined) => void;
-  onSearchChange: (search: string) => void;
-}) {
-  const value = statusFilter ?? "all";
-  return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <Tabs
-        value={value}
-        onValueChange={(v) =>
-          onStatusFilterChange(v === "all" ? undefined : (v as TaskStatus))
-        }
-      >
-        <TabsList>
-          <TabsTrigger value="all">
-            All{" "}
-            <span className="text-muted-foreground ml-1.5">{counts.all}</span>
-          </TabsTrigger>
-          {TASK_STATUSES.map((s) => (
-            <TabsTrigger key={s} value={s}>
-              {TASK_STATUS_LABEL[s]}
-              <span className="text-muted-foreground ml-1.5">{counts[s]}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      <div className="relative w-full sm:w-64">
-        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-        <Input
-          placeholder="Search tasks..."
-          value={search}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-9"
-        />
-      </div>
     </div>
   );
 }

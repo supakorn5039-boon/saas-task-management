@@ -1,4 +1,5 @@
 import axios from "axios";
+import { navigateTo } from "@/lib/router";
 import { useAuthStore } from "@/store/auth.store";
 
 const api = axios.create({
@@ -22,13 +23,19 @@ api.interceptors.request.use(
   },
 );
 
-// Add a response interceptor to handle auth errors
+// Auto-logout on 401. Skip the redirect when the failing call is the login
+// endpoint itself — we want the form to surface "invalid credentials" inline,
+// not bounce the user back to /login mid-submit.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    const status = error?.response?.status;
+    const url: string | undefined = error?.config?.url;
+    const isAuthCall = typeof url === "string" && url.includes("/auth/");
+
+    if (status === 401 && !isAuthCall) {
       useAuthStore.getState().logout();
-      window.location.href = "/login";
+      navigateTo("/login");
     }
     return Promise.reject(error);
   },

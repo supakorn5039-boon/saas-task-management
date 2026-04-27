@@ -1,19 +1,19 @@
 import type { LucideIcon } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
-export type KpiTone = "indigo" | "slate" | "amber" | "emerald" | "rose";
+export type StatTone = "indigo" | "slate" | "amber" | "emerald";
 
 interface Props {
   label: string;
   value: number | string;
   icon: LucideIcon;
-  tone?: KpiTone;
+  tone?: StatTone;
   hint?: string;
 }
 
-// Tinted chip + accent border per tone — keeps the colorful look consistent
-// across any page that uses KpiCard.
-const TONE_STYLES: Record<KpiTone, { chip: string; border: string }> = {
+// Tinted chip + accent border per tone — keeps the look consistent across
+// any page that renders stats.
+const TONE_STYLES: Record<StatTone, { chip: string; border: string }> = {
   indigo: {
     chip: "bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300",
     border: "border-l-indigo-500",
@@ -30,13 +30,9 @@ const TONE_STYLES: Record<KpiTone, { chip: string; border: string }> = {
     chip: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
     border: "border-l-emerald-500",
   },
-  rose: {
-    chip: "bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300",
-    border: "border-l-rose-500",
-  },
 };
 
-export function KpiCard({
+export function StatCard({
   label,
   value,
   icon: Icon,

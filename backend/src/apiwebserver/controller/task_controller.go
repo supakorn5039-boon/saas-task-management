@@ -1,7 +1,6 @@
 package controller
 
 import (
-	"net/http"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -24,7 +23,7 @@ func (ctrl *TaskController) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		tasks.GET("", ctrl.getTasks)
 		tasks.POST("", ctrl.createTask)
-		tasks.PUT("/:id", ctrl.updateStatus)
+		tasks.PUT("/:id", ctrl.updateTask)
 		tasks.DELETE("/:id", ctrl.deleteTask)
 	}
 }
@@ -47,13 +46,13 @@ func (ctrl *TaskController) getTasks(c *gin.Context) {
 		Order:   c.Query("order"),
 	}
 	if opts.Status != "" && !opts.Status.Valid() {
-		errorResponse(c, "invalid status filter", http.StatusBadRequest)
+		badRequest(c, "invalid status filter")
 		return
 	}
 
 	result, err := ctrl.svc.ListTasks(opts)
 	if err != nil {
-		errorResponse(c, err.Error(), http.StatusInternalServerError)
+		errorResponse(c, err)
 		return
 	}
 	successResponse(c, result)
@@ -88,43 +87,58 @@ func (ctrl *TaskController) createTask(c *gin.Context) {
 	}
 
 	if err := c.ShouldBindJSON(&body); err != nil {
-		errorResponse(c, err.Error(), http.StatusBadRequest)
+		badRequest(c, err.Error())
 		return
 	}
 
 	task, err := ctrl.svc.CreateTask(userID, body.Title, body.Description)
 	if err != nil {
-		errorResponse(c, err.Error(), http.StatusInternalServerError)
+		errorResponse(c, err)
 		return
 	}
 
 	successResponse(c, task)
 }
 
-func (ctrl *TaskController) updateStatus(c *gin.Context) {
+func (ctrl *TaskController) updateTask(c *gin.Context) {
 	userID := c.MustGet("user_id").(uint)
 
 	taskID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		errorResponse(c, "invalid task id", http.StatusBadRequest)
+		badRequest(c, "invalid task id")
 		return
 	}
 
+	// All optional — caller may patch any subset of {title, description, status}.
 	var body struct {
-		Status model.TaskStatus `json:"status" binding:"required"`
+		Title       *string           `json:"title"`
+		Description *string           `json:"description"`
+		Status      *model.TaskStatus `json:"status"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		errorResponse(c, err.Error(), http.StatusBadRequest)
+		badRequest(c, err.Error())
 		return
 	}
-	if !body.Status.Valid() {
-		errorResponse(c, "invalid status", http.StatusBadRequest)
+	if body.Title == nil && body.Description == nil && body.Status == nil {
+		badRequest(c, "no fields to update")
+		return
+	}
+	if body.Title != nil && *body.Title == "" {
+		badRequest(c, "title cannot be empty")
+		return
+	}
+	if body.Status != nil && !body.Status.Valid() {
+		badRequest(c, "invalid status")
 		return
 	}
 
-	task, err := ctrl.svc.UpdateStatus(userID, uint(taskID), body.Status)
+	task, err := ctrl.svc.UpdateTask(userID, uint(taskID), service.UpdateTaskInput{
+		Title:       body.Title,
+		Description: body.Description,
+		Status:      body.Status,
+	})
 	if err != nil {
-		errorResponse(c, err.Error(), http.StatusInternalServerError)
+		errorResponse(c, err)
 		return
 	}
 
@@ -136,12 +150,12 @@ func (ctrl *TaskController) deleteTask(c *gin.Context) {
 
 	taskID, err := strconv.ParseUint(c.Param("id"), 10, 32)
 	if err != nil {
-		errorResponse(c, "invalid task id", http.StatusBadRequest)
+		badRequest(c, "invalid task id")
 		return
 	}
 
 	if err := ctrl.svc.DeleteTask(userID, uint(taskID)); err != nil {
-		errorResponse(c, err.Error(), http.StatusInternalServerError)
+		errorResponse(c, err)
 		return
 	}
 

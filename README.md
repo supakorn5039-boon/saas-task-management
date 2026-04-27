@@ -1,182 +1,218 @@
 # SaaS Task Management
 
-A full-stack task management application built with **Go + React**, featuring JWT authentication, role-based access, an admin dashboard, and a colorful modern UI.
+A full-stack task tracker built end-to-end as a portfolio piece — Go on the
+back, React 19 on the front, Postgres in the middle. Built to demonstrate
+production patterns I'd actually ship at work, not a bootcamp todo app.
 
+[![CI](https://github.com/supakorn5039-boon/saas-task-management/actions/workflows/ci.yml/badge.svg)](https://github.com/supakorn5039-boon/saas-task-management/actions/workflows/ci.yml)
 ![Go](https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17.5-4169E1?logo=postgresql&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4.2-06B6D4?logo=tailwindcss&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-06B6D4?logo=tailwindcss&logoColor=white)
+![Tests](https://img.shields.io/badge/Tests-passing-brightgreen)
 
 ---
 
-## Tech Stack
+## What this project actually is
 
-| Layer        | Technology                                                                |
-| ------------ | ------------------------------------------------------------------------- |
-| **Frontend** | React 19, TypeScript, TanStack Router / Query / Table, Zustand            |
-| **Backend**  | Go 1.25, Gin, GORM, JWT                                                   |
-| **Database** | PostgreSQL 17.5                                                           |
-| **Styling**  | Tailwind CSS 4, shadcn/ui, Lucide Icons                                   |
-| **Tooling**  | Vite 8, Lefthook, ESLint, Prettier, Docker                                |
+A multi-user task management app where:
 
----
+- **Users** sign up, log in, manage their own tasks (CRUD with full edit, status flips, search, filter, sort, paginated table).
+- **Admins** manage other users — change role, deactivate, delete (with self-protection so an admin can't lock themselves out).
+- **Account settings** — change own password with current-password verification.
+- **Dashboard** shows live stats and recent activity from a single API call.
 
-## Features
+What makes it more than a tutorial:
 
-### App
-- **Authentication** — Register, login, JWT-protected routes, persistent auth via Zustand
-- **Tasks** — Create with title + description, three-state status (`todo` / `in_progress` / `done`), delete
-- **Paginated data table** — Server-side sort, filter by status, full-text search, page-size selector (10/20/50/100)
-- **Status filter tabs** with live counts per status (one round-trip)
-- **Admin sidebar shell** — Collapsible nav with role-aware menu items (admin-only sections hidden for regular users)
-- **Dashboard** — KPI cards (total / todo / in progress / done) + recent activity, all from a single API call
-- **Theme** — Vibrant indigo brand, status-colored badges (slate / amber / emerald), tooltips on hover for action buttons
-- **Toast notifications** — Sonner for success/error feedback
-
-### Architecture
-- **Migration framework** — Versioned, immutable raw-SQL migrations with auto-run on boot + rollback support
-- **Seeder framework** — Registry pattern via `init()`, GORM with `clause.OnConflict` for idempotency
-- **Query key factory** — TanStack Query keys live with the service; hooks consume them so routes don't know React Query internals
-- **Clean separation** — `types/` (pure), `constants/` (display labels), `styles/` (Tailwind), `components/` (UI), `hooks/` (data), `services/` (API)
-- **Reusable data-table primitives** — `DataTablePagination` and `DataTableSortHeader` work for any future table
+- **Versioned, reversible SQL migrations** (not GORM AutoMigrate) — see [ADR 001](docs/decisions/001-raw-sql-migrations.md).
+- **Structured `AppError` envelope** — services classify errors, controllers map cleanly to status codes; GORM strings never leak to clients. See [ADR 002](docs/decisions/002-apperror-envelope.md).
+- **TanStack Query key factories** — single source of truth for cache invalidation. See [ADR 003](docs/decisions/003-query-key-factories.md).
+- **Optimistic UI updates** on the most-common interaction (task status flip) with full rollback on failure.
+- **Real graceful shutdown** — SIGTERM drains in-flight requests, doesn't drop them.
+- **Real `/healthz`** — pings the DB, returns 503 if Postgres is unreachable.
+- **Per-IP rate limiting** on the auth endpoints (in-memory token-bucket).
+- **Conservative security headers** — XCTO, X-Frame-Options, Referrer-Policy.
+- **Structured request logging** with `slog` and per-request IDs propagated via `X-Request-ID`.
+- **JWT secret enforcement** — fails fast at boot if missing or under 32 chars; supports `JWT_SECRET` env override.
+- **Tests on both sides** — Go service tests against a real Postgres test DB, Vitest + React Testing Library on the frontend.
+- **CI on every push** via GitHub Actions — lint, type-check, test, build for both stacks.
 
 ---
 
-## Project Structure
+## Tech stack
+
+| Layer        | Tech                                                              |
+| ------------ | ----------------------------------------------------------------- |
+| **Frontend** | React 19, TypeScript 5.9, Vite 8, TanStack Router/Query/Table, Zustand, react-hook-form, Zod |
+| **Backend**  | Go 1.25, Gin, GORM, JWT (golang-jwt v5), bcrypt                   |
+| **Database** | PostgreSQL 17.5 (Docker for local dev)                            |
+| **Styling**  | Tailwind CSS 4, shadcn/ui, lucide-react, dark mode via next-themes |
+| **Testing**  | `go test` + Postgres test DB, Vitest + Testing Library + jsdom    |
+| **Quality**  | ESLint 9, Prettier, lefthook (pre-commit/pre-push), GitHub Actions CI |
+| **Tooling**  | Docker Compose, Bruno (API collection), Vite, slog                |
+
+---
+
+## API
+
+### Public
+
+| Method | Endpoint              | Notes                                  |
+| ------ | --------------------- | -------------------------------------- |
+| GET    | `/api/ping`           | Liveness                               |
+| GET    | `/api/healthz`        | Readiness — pings DB                   |
+| POST   | `/api/auth/login`     | Rate-limited (5/min/IP)                |
+| POST   | `/api/auth/register`  | Rate-limited; password ≥ 8 chars       |
+
+### Authenticated
+
+| Method | Endpoint               | Notes                                                     |
+| ------ | ---------------------- | --------------------------------------------------------- |
+| GET    | `/api/user/profile`    | Current user                                              |
+| PUT    | `/api/user/password`   | Change own password (verifies current)                    |
+| GET    | `/api/tasks`           | Paginated list, filter, search, sort + status counts      |
+| POST   | `/api/tasks`           | Create                                                    |
+| PUT    | `/api/tasks/:id`       | Patch any subset of `{title, description, status}`        |
+| DELETE | `/api/tasks/:id`       | Soft delete                                               |
+
+### Admin (RBAC enforced)
+
+| Method | Endpoint                   | Notes                                                |
+| ------ | -------------------------- | ---------------------------------------------------- |
+| GET    | `/api/admin/users`         | Paginated list with search + sort (admin-only)       |
+| PUT    | `/api/admin/users/:id`     | Update `role` and/or `status` (self-demote blocked)  |
+| DELETE | `/api/admin/users/:id`     | Soft delete (self-delete blocked)                    |
+
+#### `GET /api/tasks` query params
+
+| Param      | Default      | Notes                                                            |
+| ---------- | ------------ | ---------------------------------------------------------------- |
+| `page`     | `1`          | ≥ 1                                                              |
+| `per_page` | `10`         | Clamped 1–100                                                    |
+| `status`   | (none)       | `todo` \| `in_progress` \| `done`                                |
+| `search`   | (none)       | ILIKE on title + description                                     |
+| `sort`     | `created_at` | Whitelisted: `created_at`, `updated_at`, `title`, `status`       |
+| `order`    | `desc`       | `asc` \| `desc`                                                  |
+
+Response envelope:
+
+```json
+{
+  "data":  [{ "id": 1, "title": "...", "status": "todo", "createdAt": "..." }],
+  "meta":  { "page": 1, "perPage": 10, "total": 47 },
+  "counts":{ "all": 47, "todo": 30, "in_progress": 10, "done": 7 }
+}
+```
+
+Error envelope (consistent across all endpoints):
+
+```json
+{ "error": "task not found" }
+```
+
+---
+
+## Project structure
 
 ```
 saas-task-management/
 ├── backend/
 │   ├── src/
 │   │   ├── apiwebserver/
-│   │   │   ├── controller/      # HTTP handlers
-│   │   │   ├── service/         # Business logic + GORM queries
-│   │   │   └── middleware/      # JWT auth
-│   │   ├── config/              # INI config loader
+│   │   │   ├── controller/      HTTP handlers (auth, user, task, admin, response helper)
+│   │   │   ├── service/         Business logic + GORM queries (+ tests)
+│   │   │   └── middleware/      Protected (JWT), Rbac, RequestLogger, RateLimit, SecurityHeaders
+│   │   ├── apperror/            Typed error envelope (with tests)
+│   │   ├── config/              INI loader + env-var override + JWT secret validation
 │   │   ├── database/
-│   │   │   ├── database.go      # Connect + auto-run migrations
-│   │   │   ├── model/           # GORM models + DTOs
-│   │   │   ├── migration/       # Versioned raw-SQL migrations
-│   │   │   └── seeder/          # Registry-based seeders
-│   │   ├── pkg/                 # API server bootstrap (CORS, routes)
-│   │   ├── security/            # JWT + bcrypt helpers
-│   │   └── main.go              # Entry point + CLI commands
-│   ├── bruno/                   # API collection
+│   │   │   ├── database.go      Connect + auto-run migrations
+│   │   │   ├── model/           GORM models + DTOs
+│   │   │   ├── migration/       Versioned raw-SQL migrations
+│   │   │   └── seeder/          Registry-based seeders
+│   │   ├── pkg/                 API server bootstrap (router, CORS, healthz)
+│   │   ├── security/            JWT + bcrypt
+│   │   ├── testhelpers/         Test DB setup
+│   │   └── main.go              Entry point + CLI commands + graceful shutdown
+│   ├── bruno/                   API collection (Auth, User, Tasks, Admin, Health)
 │   ├── docker-compose.yml
-│   └── config.ini               # (gitignored — copy from config.example.ini)
+│   └── config.example.ini       Copy to config.ini and edit
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── ui/              # shadcn/ui primitives
-│   │   │   ├── layout/          # AppShell, AppSidebar, UserMenu, nav-config
-│   │   │   ├── data-table/      # Reusable pagination + sort header
-│   │   │   ├── tasks/           # TaskTable, TaskStatusBadge, TaskStatusSelect
-│   │   │   └── dashboard/       # KpiCard
-│   │   ├── routes/              # File-based pages (TanStack Router)
-│   │   ├── services/            # API clients + query-key factories
-│   │   ├── hooks/               # useTasks + mutation hooks
-│   │   ├── store/               # Zustand auth store
-│   │   ├── types/               # Pure TypeScript types
-│   │   ├── constants/           # Display labels (TASK_STATUS_LABEL, etc.)
-│   │   ├── styles/              # Tailwind class maps per domain
-│   │   └── lib/                 # Utilities + axios instance
+│   │   │   ├── ui/              shadcn primitives
+│   │   │   ├── layout/          AppShell, Sidebar, UserMenu
+│   │   │   ├── shared/          PageError, Skeletons, StatCard, ConfirmDialog, ThemeToggle, data-table primitives
+│   │   │   ├── tasks/           Task domain components
+│   │   │   └── admin/           Admin domain components
+│   │   ├── routes/              File-based pages (TanStack Router)
+│   │   ├── services/            API clients + query-key factories
+│   │   ├── hooks/               TanStack Query hooks + list-state helpers
+│   │   ├── store/               Zustand auth store
+│   │   ├── types/               Cross-feature TS types
+│   │   ├── constants/           Display labels
+│   │   ├── styles/              Tailwind class maps per domain
+│   │   ├── validators/          Zod schemas
+│   │   ├── lib/                 axios, api-error, date, router shim, utils
+│   │   └── __tests__/           Mirrors src/ — Vitest tests
+│   ├── vitest.config.ts
 │   ├── package.json
 │   └── vite.config.ts
 │
-├── lefthook.yml                 # Pre-commit / pre-push hook config
+├── docs/decisions/              Architecture Decision Records (ADRs)
+├── .github/workflows/ci.yml     Lint + type-check + test + build, both stacks
+├── lefthook.yml                 Pre-commit / pre-push hook config
 └── README.md
 ```
 
----
-
-## API Endpoints
-
-### Public
-
-| Method | Endpoint             | Description       |
-| ------ | -------------------- | ----------------- |
-| `GET`  | `/api/ping`          | Health check      |
-| `POST` | `/api/auth/login`    | User login        |
-| `POST` | `/api/auth/register` | User registration |
-
-### Protected (JWT required)
-
-| Method   | Endpoint            | Description                                              |
-| -------- | ------------------- | -------------------------------------------------------- |
-| `GET`    | `/api/user/profile` | Get current user                                         |
-| `GET`    | `/api/tasks`        | List tasks (paginated + filterable — see query params)   |
-| `POST`   | `/api/tasks`        | Create a task                                            |
-| `PUT`    | `/api/tasks/:id`    | Update task status                                       |
-| `DELETE` | `/api/tasks/:id`    | Delete a task                                            |
-
-### `GET /api/tasks` query params
-
-| Param      | Default      | Notes                                                            |
-| ---------- | ------------ | ---------------------------------------------------------------- |
-| `page`     | `1`          | Page number, ≥ 1                                                 |
-| `per_page` | `10`         | Page size, clamped 1–100                                         |
-| `status`   | (none)       | Filter: `todo` \| `in_progress` \| `done`                        |
-| `search`   | (none)       | Substring match on `title` and `description` (case-insensitive)  |
-| `sort`     | `created_at` | One of `created_at`, `updated_at`, `title`, `status` (whitelist) |
-| `order`    | `desc`       | `asc` or `desc`                                                  |
-
-Response shape:
-
-```json
-{
-  "data":  [ { "id": 1, "title": "...", "description": "...", "status": "todo", "createdAt": "..." } ],
-  "meta":  { "page": 1, "perPage": 10, "total": 47 },
-  "counts": { "all": 47, "todo": 30, "in_progress": 10, "done": 7 }
-}
-```
+The conventions for *what goes where* are pinned in [ADR 006](docs/decisions/006-frontend-layer-layout.md).
 
 ---
 
-## Getting Started
+## Getting started
 
 ### Prerequisites
 
 - **Go** 1.25+
-- **Node.js** 18+
-- **Docker** (for PostgreSQL)
-- **Lefthook** (`brew install lefthook` on macOS)
+- **Node** 22+
+- **Docker** (for Postgres)
+- (Optional) **Lefthook** — `brew install lefthook` to enable git hooks
 
-### 1. Start the Database
+### 1. Start the database
 
 ```bash
 cd backend
-docker-compose up -d
+docker compose up -d
 ```
 
-### 2. Configure the Backend
+### 2. Configure the backend
 
 ```bash
-cp backend/config.example.ini backend/config.ini
-# edit jwt_secret + DB credentials as needed
+cp config.example.ini config.ini
+# Edit jwt_secret (≥ 32 chars) and DB credentials.
+# Or set JWT_SECRET / DB_PASSWORD as environment variables — they win over config.ini.
 ```
 
-### 3. Run the Backend
+### 3. Run the backend
 
 ```bash
 cd backend
 go run ./src
 ```
 
-> Backend runs on `http://localhost:8080`.
-> Migrations auto-run on every boot via `database.Connect()`.
+Backend serves on `http://localhost:8080`. Migrations auto-run on every boot.
 
 CLI commands:
 
 ```bash
 go run ./src                  # start the HTTP server
-go run ./src seed             # seed default roles + users (admin@example.com / user@example.com, password: password123)
+go run ./src seed             # seed default roles + users
 go run ./src migrate:status   # show migration status
-go run ./src migrate:rollback # rollback the last migration
+go run ./src migrate:rollback # roll back the last migration
 ```
 
-### 4. Run the Frontend
+### 4. Run the frontend
 
 ```bash
 cd frontend
@@ -184,114 +220,106 @@ npm install
 npm run dev
 ```
 
-> Frontend runs on `http://localhost:5173`.
+Frontend serves on `http://localhost:5173`.
 
-### 5. Enable git hooks (once per clone)
+### 5. (Optional) Enable git hooks
 
 ```bash
 lefthook install
 ```
 
-Wires up `.git/hooks/pre-commit` and `.git/hooks/pre-push` so every commit/push runs the right checks (see [Git Hooks](#git-hooks) below).
-
-### 6. (Optional) Use a custom local domain
-
-Instead of `localhost:5173`, run the app at `http://saas-management.local`:
-
-```bash
-echo "127.0.0.1 saas-management.local" | sudo tee -a /etc/hosts
-sudo brew services start nginx   # uses /opt/homebrew/etc/nginx/servers/saas-management.conf
-```
-
-Nginx routes `/api/*` to the Go backend (`:8080`) and everything else to the Vite dev server (`:5173`), with WebSocket upgrade for HMR. The frontend is whitelisted via `vite.config.ts` `server.allowedHosts`.
+Wires up pre-commit (lint, type-check, build per file) and pre-push (full prod build, secret scan, TODO scan).
 
 ---
 
-## Git Hooks
+## Default seeded users
 
-Managed by [lefthook](https://github.com/evilmartians/lefthook) — single Go binary, configured in `lefthook.yml`.
-
-### Pre-commit (only on changed files, parallel ~3s)
-
-| Match                          | Check                                |
-| ------------------------------ | ------------------------------------ |
-| `frontend/src/**/*.{ts,tsx}`   | eslint --fix, prettier, tsc          |
-| `backend/**/*.go`              | go build, go vet, go test            |
-
-### Pre-push (heavier checks)
-
-| Check        | What it does                                  |
-| ------------ | --------------------------------------------- |
-| vite-build   | Full production build of the frontend         |
-| todo-scan    | Reports `TODO` / `FIXME` markers              |
-| secret-scan  | Blocks pushes with hardcoded secret patterns  |
-
-Run any stage manually:
-
-```bash
-lefthook run pre-commit --all-files
-lefthook run pre-push --all-files
-```
-
----
-
-## Frontend Scripts
-
-| Script             | Command                  |
-| ------------------ | ------------------------ |
-| `npm run dev`      | Start Vite dev server    |
-| `npm run build`    | Production build         |
-| `npm run preview`  | Preview production build |
-| `npm run lint`     | ESLint                   |
-| `npm run lint:fix` | Auto-fix lint issues     |
-| `npm run format`   | Prettier write           |
-| `npm run type-check` | TypeScript check       |
-
----
-
-## Environment Variables
-
-### Frontend
-
-Create `frontend/.env` (optional — defaults work for local dev):
-
-```
-VITE_API_URL="http://localhost:8080/api"
-```
-
-### Backend
-
-Configure `backend/config.ini`:
-
-```ini
-[server]
-port       = 8080
-production = false
-jwt_secret = your-secret-key
-
-[database]
-host     = localhost
-user     = username
-password = password
-database = postgres
-port     = 5432
-```
-
----
-
-## Default Seeded Users
-
-Run `go run ./src seed` to create:
+Run `cd backend && go run ./src seed` to create:
 
 | Email                | Role  | Password      |
 | -------------------- | ----- | ------------- |
 | `admin@example.com`  | admin | `password123` |
 | `user@example.com`   | user  | `password123` |
 
-Roles control sidebar visibility — `admin` sees the **Users** and **Settings** menu items; `user` does not.
+Roles control sidebar visibility — `admin` sees the **Users** menu item; `user` does not.
+
+---
+
+## Testing
+
+### Backend
+
+```bash
+cd backend
+# Make sure docker compose is up + create the test DB once:
+PGPASSWORD=password psql -h localhost -U username -d postgres -c "CREATE DATABASE saas_test;"
+
+go test -race -p 1 ./...   # -p 1 prevents parallel package runs from racing on the shared test DB
+```
+
+Tests live next to the code (Go convention) and run against a real Postgres
+instance via `src/testhelpers/db.go`. The helper auto-migrates the schema and
+truncates between tests. If the test DB is unreachable, tests `t.Skip` rather
+than fail — so you can still run other test suites without Postgres.
+
+CI uses a Postgres service container (see `.github/workflows/ci.yml`).
+
+### Frontend
+
+```bash
+cd frontend
+npm test          # one-off run
+npm run test:watch
+npm run test:ui
+```
+
+Tests live in `frontend/src/__tests__/` and mirror the source tree. See
+[ADR 004](docs/decisions/004-test-layout.md) for why backend co-locates and
+frontend doesn't.
+
+---
+
+## Production-readiness checklist
+
+What I've actually built (not just claimed):
+
+- [x] **JWT secret validation** — server refuses to start if `jwt_secret` is missing or under 32 chars.
+- [x] **Env-var secrets override** — `JWT_SECRET`, `DB_PASSWORD` etc. take precedence over `config.ini`.
+- [x] **Graceful shutdown** — SIGTERM triggers `srv.Shutdown(ctx)` with a 15s drain.
+- [x] **Real readiness probe** — `/healthz` pings the DB; returns 503 on failure so a load balancer pulls the pod out.
+- [x] **Rate limiting** — token-bucket per-IP on `/auth/*` (5/min) to slow credential stuffing.
+- [x] **Security headers** — X-Content-Type-Options, X-Frame-Options, Referrer-Policy, X-XSS-Protection.
+- [x] **Structured logs with request IDs** — `slog` JSON, request ID propagated via `X-Request-ID`.
+- [x] **No GORM error leaks** — services classify errors, controllers map; only safe messages reach clients. Real errors are logged.
+- [x] **Soft deletes** — GORM's `DeletedAt`; second-delete returns 404.
+- [x] **Self-protection on admin actions** — admin can't demote / deactivate / delete their own account.
+- [x] **CI on every push** — backend (build, vet, test with `-race`) + frontend (lint, type-check, test, build).
+- [x] **Reversible migrations** with `Down` and a CLI rollback.
+- [x] **Test coverage on critical paths** — auth, task CRUD, admin operations, error envelope.
+
+What's intentionally **not** in this iteration (with the rationale):
+
+- ❌ **Multi-tenancy / organizations** — see [ADR 005](docs/decisions/005-multi-tenancy-roadmap.md). It's the next big change, big enough to be its own project.
+- ❌ **Refresh tokens** — current tokens expire in 3 days. Switching to short-lived access + httpOnly refresh is the right next step but needs the cookie path nailed down.
+- ❌ **Email flows** (verification, password reset) — needs a transactional email provider (Resend / Postmark). Plumbing is in place; provider is the missing piece.
+- ❌ **Stripe / billing** — same reason; needs a real account.
+- ❌ **Distributed rate limiting** — the in-memory limiter is per-process. Multi-replica deploys need Redis (noted in the rate-limit middleware).
+
+---
+
+## Decisions worth reading
+
+These ADRs explain the choices that aren't obvious from the code:
+
+- [001 — Versioned raw-SQL migrations over GORM AutoMigrate](docs/decisions/001-raw-sql-migrations.md)
+- [002 — AppError envelope and HTTP error responses](docs/decisions/002-apperror-envelope.md)
+- [003 — TanStack Query key factories live with their service](docs/decisions/003-query-key-factories.md)
+- [004 — Test layout: co-located backend, mirrored frontend](docs/decisions/004-test-layout.md)
+- [005 — Multi-tenancy is the next big change (proposed)](docs/decisions/005-multi-tenancy-roadmap.md)
+- [006 — Frontend organized by layer, not by feature](docs/decisions/006-frontend-layer-layout.md)
 
 ---
 
 ## License
 
-This project is for educational and portfolio purposes.
+MIT. Built as a portfolio project — feel free to use any of the patterns.

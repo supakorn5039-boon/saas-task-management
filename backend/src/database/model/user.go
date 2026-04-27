@@ -11,22 +11,39 @@ type User struct {
 }
 
 type UserDto struct {
-	Id     uint   `json:"id"`
-	Email  string `json:"email"`
-	Status int    `json:"status"`
-	Role   string `json:"role"`
+	Id        uint   `json:"id"`
+	Email     string `json:"email"`
+	Status    int    `json:"status"`
+	Role      string `json:"role"`
+	CreatedAt string `json:"createdAt"`
 }
 
-type CredentialDto struct {
-	Email    string `json:"email" binding:"required"`
-	Password string `json:"password" binding:"required"`
+// Allowed roles — keep in sync with the seeder + frontend nav-config.
+func IsValidRole(role string) bool {
+	switch role {
+	case "admin", "manager", "user":
+		return true
+	}
+	return false
+}
+
+type UserListMeta struct {
+	Page    int   `json:"page"`
+	PerPage int   `json:"perPage"`
+	Total   int64 `json:"total"`
+}
+
+type UserListResponse struct {
+	Data []*UserDto   `json:"data"`
+	Meta UserListMeta `json:"meta"`
 }
 
 func (u *User) ToDto() *UserDto {
 	return &UserDto{
-		Id:     u.ID,
-		Email:  u.Email,
-		Status: u.Status,
-		Role:   u.Role,
+		Id:        u.ID,
+		Email:     u.Email,
+		Status:    u.Status,
+		Role:      u.Role,
+		CreatedAt: u.CreatedAt.Format("2006-01-02T15:04:05Z07:00"),
 	}
 }

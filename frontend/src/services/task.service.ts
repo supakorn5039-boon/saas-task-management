@@ -5,6 +5,7 @@ import type {
   Task,
   TaskListResponse,
   TaskStatus,
+  UpdateTaskRequest,
 } from "@/types/task";
 
 // Query key factory — single source of truth for React Query keys.
@@ -37,9 +38,13 @@ export const taskService = {
     return response.data;
   },
 
-  updateStatus: async (id: number, status: TaskStatus): Promise<Task> => {
-    const response = await api.put<Task>(`/tasks/${id}`, { status });
+  updateTask: async (id: number, data: UpdateTaskRequest): Promise<Task> => {
+    const response = await api.put<Task>(`/tasks/${id}`, data);
     return response.data;
+  },
+
+  updateStatus: async (id: number, status: TaskStatus): Promise<Task> => {
+    return taskService.updateTask(id, { status });
   },
 
   deleteTask: async (id: number): Promise<void> => {

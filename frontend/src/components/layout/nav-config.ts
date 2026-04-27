@@ -6,8 +6,9 @@ import {
   Users,
   type LucideIcon,
 } from "lucide-react";
+import type { Role } from "@/types/auth";
 
-export type Role = "admin" | "manager" | "user";
+export type { Role };
 
 export interface NavItem {
   label: string;
@@ -33,14 +34,14 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Admin",
-    items: [
-      { label: "Users", to: "/users", icon: Users, roles: ["admin"] },
-      { label: "Settings", to: "/settings", icon: Settings, roles: ["admin"] },
-    ],
+    items: [{ label: "Users", to: "/users", icon: Users, roles: ["admin"] }],
   },
   {
     label: "Account",
-    items: [{ label: "Profile", to: "/profile", icon: User }],
+    items: [
+      { label: "Profile", to: "/profile", icon: User },
+      { label: "Settings", to: "/settings", icon: Settings },
+    ],
   },
 ];
 

@@ -3,7 +3,6 @@ import { createLazyFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { isAxiosError } from "axios";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
-import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -15,14 +14,9 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getApiError } from "@/lib/api-error";
 import { authService } from "@/services/auth.service";
-
-const loginSchema = z.object({
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+import { loginSchema, type LoginInput } from "@/validators/auth.validator";
 
 export const Route = createLazyFileRoute("/login")({
   component: LoginPage,
@@ -33,21 +27,27 @@ function LoginPage() {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors, isSubmitting },
-  } = useForm<LoginForm>({
+  } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
   });
 
-  const onSubmit = async (data: LoginForm) => {
+  const onSubmit = async (data: LoginInput) => {
     try {
       await authService.login(data);
       toast.success("Logged in successfully");
       navigate({ to: "/tasks" });
     } catch (error) {
-      const message = isAxiosError(error)
-        ? error.response?.data?.error
-        : undefined;
-      toast.error(message || "Failed to login");
+      const message = getApiError(error, "Failed to login");
+      // 401 from the login endpoint = bad credentials. Show inline on the
+      // password field so the user knows what to fix; everything else (5xx,
+      // network) goes to a toast.
+      if (isAxiosError(error) && error.response?.status === 401) {
+        setError("password", { message });
+        return;
+      }
+      toast.error(message);
     }
   };
 

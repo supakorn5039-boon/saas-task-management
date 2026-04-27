@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/supakorn5039-boon/saas-task-backend/src/apiwebserver/service"
 	"github.com/supakorn5039-boon/saas-task-backend/src/security"
 )
 
@@ -30,30 +29,25 @@ func Protected() gin.HandlerFunc {
 		}
 
 		c.Set("user_id", claims.Id)
+		c.Set("role", claims.Role)
 		c.Next()
 	}
 }
 
-func Rbac() gin.HandlerFunc {
+func Rbac(allowedRoles ...string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userID, exists := c.Get("user_id")
+		role, exists := c.Get("role")
 		if !exists {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "user_id not found in context"})
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "role not found in context"})
 			return
 		}
 
-		userService := service.NewUserService()
-		user, err := userService.GetUserById(userID.(uint))
-		if err != nil {
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
-			return
+		for _, allowed := range allowedRoles {
+			if role == allowed {
+				c.Next()
+				return
+			}
 		}
-
-		if user.Role != "admin" {
-			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
-			return
-		}
-
-		c.Next()
+		c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": "insufficient permissions"})
 	}
 }

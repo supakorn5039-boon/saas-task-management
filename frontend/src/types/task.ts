@@ -13,6 +13,12 @@ export interface CreateTaskRequest {
   description?: string;
 }
 
+export interface UpdateTaskRequest {
+  title?: string;
+  description?: string;
+  status?: TaskStatus;
+}
+
 export type TaskSortField = "created_at" | "updated_at" | "title" | "status";
 export type SortOrder = "asc" | "desc";
 

@@ -1,87 +1,87 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { createLazyFileRoute } from "@tanstack/react-router";
-import { isAxiosError } from "axios";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
+import { PageError } from "@/components/shared/page-state";
+import { TableSkeleton } from "@/components/shared/skeletons";
+import { TaskEditDialog } from "@/components/tasks/task-edit-dialog";
 import { TaskTable } from "@/components/tasks/task-table";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { useTaskListState } from "@/hooks/use-task-list-state";
 import {
   useCreateTask,
   useDeleteTask,
   useTasks,
   useUpdateTaskStatus,
 } from "@/hooks/use-tasks";
-import type { SortOrder, TaskSortField, TaskStatus } from "@/types/task";
+import { getApiError } from "@/lib/api-error";
+import type { Task } from "@/types/task";
+import { newTaskSchema, type NewTaskInput } from "@/validators/task.validator";
 
 export const Route = createLazyFileRoute("/tasks")({
   component: Tasks,
 });
 
-const DEFAULT_PER_PAGE = 10;
-
 function Tasks() {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-
-  // Server-driven list state
-  const [page, setPage] = useState(1);
-  const [perPage, setPerPage] = useState(DEFAULT_PER_PAGE);
-  const [statusFilter, setStatusFilter] = useState<TaskStatus | undefined>();
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState<{ field: TaskSortField; order: SortOrder }>({
-    field: "created_at",
-    order: "desc",
-  });
+  const list = useTaskListState();
 
   const { data, isLoading, isFetching, error } = useTasks({
-    page,
-    perPage,
-    status: statusFilter,
-    search,
-    sort: sort.field,
-    order: sort.order,
+    page: list.page,
+    perPage: list.perPage,
+    status: list.status,
+    search: list.search,
+    sort: list.sort.field,
+    order: list.sort.order,
   });
 
   const createTask = useCreateTask();
   const updateStatus = useUpdateTaskStatus();
   const deleteTask = useDeleteTask();
 
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  const [editing, setEditing] = useState<Task | null>(null);
+  const [deleting, setDeleting] = useState<Task | null>(null);
+
+  const form = useForm<NewTaskInput>({
+    resolver: zodResolver(newTaskSchema),
+    defaultValues: { title: "", description: "" },
+  });
+
+  const onAddTask = (values: NewTaskInput) => {
     createTask.mutate(
-      { title, description: description.trim() || undefined },
+      { title: values.title, description: values.description || undefined },
       {
         onSuccess: () => {
-          setTitle("");
-          setDescription("");
+          form.reset();
           toast.success("Task created");
         },
-        onError: (err) => {
-          const msg = isAxiosError(err) ? err.response?.data?.error : undefined;
-          toast.error(msg || "Failed to create task");
-        },
+        onError: (err) =>
+          toast.error(getApiError(err, "Failed to create task")),
       },
     );
   };
 
-  // Reset to page 1 whenever filters change so the user doesn't end up on an empty page
-  const resetAndRun =
-    <T,>(setter: (v: T) => void) =>
-    (value: T) => {
-      setPage(1);
-      setter(value);
-    };
+  const onConfirmDelete = async () => {
+    if (!deleting) return;
+    await new Promise<void>((resolve) => {
+      deleteTask.mutate(deleting.id, {
+        onSuccess: () => {
+          toast.success("Task deleted");
+          resolve();
+        },
+        onError: (err) => {
+          toast.error(getApiError(err, "Failed to delete task"));
+          resolve();
+        },
+      });
+    });
+  };
 
-  if (isLoading) return <div className="p-8 text-center">Loading tasks...</div>;
-  if (error)
-    return (
-      <div className="text-destructive p-8 text-center">
-        Error loading tasks
-      </div>
-    );
+  if (error) return <PageError label="Error loading tasks" />;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4">
@@ -90,19 +90,24 @@ function Tasks() {
           <CardTitle>Add New Task</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleAddTask} className="space-y-3">
-            <Input
-              placeholder="What needs to be done?"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={createTask.isPending}
-            />
+          <form onSubmit={form.handleSubmit(onAddTask)} className="space-y-3">
+            <div className="space-y-1">
+              <Input
+                placeholder="What needs to be done?"
+                disabled={createTask.isPending}
+                {...form.register("title")}
+              />
+              {form.formState.errors.title && (
+                <p className="text-destructive text-sm font-medium">
+                  {form.formState.errors.title.message}
+                </p>
+              )}
+            </div>
             <Textarea
               placeholder="Description (optional)"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
               disabled={createTask.isPending}
               rows={3}
+              {...form.register("description")}
             />
             <div className="flex justify-end">
               <Button type="submit" disabled={createTask.isPending}>
@@ -125,35 +130,58 @@ function Tasks() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <TaskTable
-            tasks={data?.data ?? []}
-            meta={data?.meta ?? { page, perPage, total: 0 }}
-            counts={
-              data?.counts ?? { all: 0, todo: 0, in_progress: 0, done: 0 }
-            }
-            statusFilter={statusFilter}
-            search={search}
-            sort={sort}
-            onStatusFilterChange={resetAndRun(setStatusFilter)}
-            onSearchChange={resetAndRun(setSearch)}
-            onSortChange={resetAndRun(setSort)}
-            onPageChange={setPage}
-            onPerPageChange={resetAndRun(setPerPage)}
-            onTaskStatusChange={(id, status) =>
-              updateStatus.mutate(
-                { id, status },
-                { onError: () => toast.error("Failed to update status") },
-              )
-            }
-            onTaskDelete={(id) =>
-              deleteTask.mutate(id, {
-                onSuccess: () => toast.success("Task deleted"),
-                onError: () => toast.error("Failed to delete task"),
-              })
-            }
-          />
+          {isLoading ? (
+            <TableSkeleton rows={5} columns={4} />
+          ) : (
+            <TaskTable
+              tasks={data?.data ?? []}
+              meta={
+                data?.meta ?? {
+                  page: list.page,
+                  perPage: list.perPage,
+                  total: 0,
+                }
+              }
+              counts={
+                data?.counts ?? { all: 0, todo: 0, in_progress: 0, done: 0 }
+              }
+              state={list}
+              actions={list}
+              onTaskStatusChange={(id, status) =>
+                updateStatus.mutate(
+                  { id, status },
+                  {
+                    onError: (err) =>
+                      toast.error(getApiError(err, "Failed to update status")),
+                  },
+                )
+              }
+              onTaskEdit={setEditing}
+              onTaskDelete={setDeleting}
+            />
+          )}
         </CardContent>
       </Card>
+
+      <TaskEditDialog
+        task={editing}
+        open={editing !== null}
+        onOpenChange={(open) => !open && setEditing(null)}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => !open && setDeleting(null)}
+        title="Delete this task?"
+        description={
+          deleting
+            ? `"${deleting.title}" will be removed permanently. This can't be undone.`
+            : undefined
+        }
+        confirmLabel="Delete"
+        destructive
+        onConfirm={onConfirmDelete}
+      />
     </div>
   );
 }
