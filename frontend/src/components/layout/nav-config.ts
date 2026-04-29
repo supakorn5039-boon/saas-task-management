@@ -1,4 +1,6 @@
 import {
+  Activity,
+  History,
   LayoutDashboard,
   ListChecks,
   Settings,
@@ -34,12 +36,21 @@ export const NAV_SECTIONS: NavSection[] = [
   },
   {
     label: "Admin",
-    items: [{ label: "Users", to: "/users", icon: Users, roles: ["admin"] }],
+    items: [
+      { label: "Users", to: "/users", icon: Users, roles: ["admin"] },
+      {
+        label: "Audit logs",
+        to: "/audit-logs",
+        icon: History,
+        roles: ["admin"],
+      },
+    ],
   },
   {
     label: "Account",
     items: [
       { label: "Profile", to: "/profile", icon: User },
+      { label: "My activity", to: "/activity", icon: Activity },
       { label: "Settings", to: "/settings", icon: Settings },
     ],
   },

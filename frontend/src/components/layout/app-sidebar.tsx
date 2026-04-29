@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useLogout } from "@/hooks/use-logout";
 import { visibleSections, type Role } from "./nav-config";
@@ -24,11 +25,21 @@ interface Props {
 export function AppSidebar({ role, currentPath }: Props) {
   const sections = visibleSections(role);
   const handleLogout = useLogout();
+  const { isMobile, setOpenMobile } = useSidebar();
+  // On mobile the sidebar is a sheet that doesn't auto-close on navigation —
+  // dismiss it explicitly when the user picks a destination or logs out.
+  const closeOnMobile = () => {
+    if (isMobile) setOpenMobile(false);
+  };
 
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <Link to="/dashboard" className="flex items-center gap-2 px-2 py-1.5">
+        <Link
+          to="/dashboard"
+          className="flex items-center gap-2 px-2 py-1.5"
+          onClick={closeOnMobile}
+        >
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 via-violet-500 to-fuchsia-500 text-white shadow-sm">
             <CheckSquare className="h-4 w-4" />
           </span>
@@ -52,7 +63,7 @@ export function AppSidebar({ role, currentPath }: Props) {
                   return (
                     <SidebarMenuItem key={item.to}>
                       <SidebarMenuButton
-                        render={<Link to={item.to} />}
+                        render={<Link to={item.to} onClick={closeOnMobile} />}
                         isActive={active}
                         tooltip={item.label}
                       >
@@ -72,7 +83,10 @@ export function AppSidebar({ role, currentPath }: Props) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              onClick={handleLogout}
+              onClick={() => {
+                closeOnMobile();
+                handleLogout();
+              }}
               tooltip="Logout"
               className="text-destructive hover:text-destructive focus-visible:text-destructive active:text-destructive"
             >

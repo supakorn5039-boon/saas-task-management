@@ -13,7 +13,7 @@ import {
 } from "@/store/auth.store";
 
 const PUBLIC_ROUTES = ["/", "/login", "/register"];
-const ADMIN_ROUTES = ["/users"];
+const ADMIN_ROUTES = ["/users", "/audit-logs"];
 
 const isPublic = (path: string) => PUBLIC_ROUTES.includes(path);
 const isAdminRoute = (path: string) =>
@@ -29,7 +29,7 @@ export const Route = createRootRoute({
         search: { redirect: location.href },
       });
     }
-    if (authed && ["/login", "/register"].includes(location.pathname)) {
+    if (authed && ["/", "/login", "/register"].includes(location.pathname)) {
       throw redirect({ to: "/dashboard" });
     }
     if (authed && isAdminRoute(location.pathname)) {

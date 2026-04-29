@@ -51,6 +51,9 @@ func MountAPIWebServer(r *gin.Engine) {
 	adminCtrl := controller.NewAdminController()
 	adminCtrl.RegisterRoutes(api)
 
+	auditCtrl := controller.NewAuditController()
+	auditCtrl.RegisterRoutes(api)
+
 	api.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{"message": "pong"})
 	})

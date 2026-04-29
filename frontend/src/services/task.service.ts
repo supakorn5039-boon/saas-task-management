@@ -1,5 +1,6 @@
 import api from "@/lib/axios";
 import type {
+  AssignableUserListResponse,
   CreateTaskRequest,
   ListTasksParams,
   Task,
@@ -16,6 +17,7 @@ export const taskKeys = {
   list: (params: ListTasksParams) => [...taskKeys.lists(), params] as const,
   details: () => [...taskKeys.all, "detail"] as const,
   detail: (id: number) => [...taskKeys.details(), id] as const,
+  assignable: () => [...taskKeys.all, "assignable"] as const,
 };
 
 export const taskService = {
@@ -25,6 +27,8 @@ export const taskService = {
         page: params.page,
         per_page: params.perPage,
         status: params.status,
+        priority: params.priority,
+        assignee: params.assignee,
         search: params.search || undefined,
         sort: params.sort,
         order: params.order,
@@ -49,5 +53,13 @@ export const taskService = {
 
   deleteTask: async (id: number): Promise<void> => {
     await api.delete(`/tasks/${id}`);
+  },
+
+  // Assignable user list — used to populate the assignee dropdown in
+  // create/edit dialogs. Cached for the session via React Query.
+  listAssignable: async (): Promise<AssignableUserListResponse> => {
+    const response =
+      await api.get<AssignableUserListResponse>("/users/assignable");
+    return response.data;
   },
 };

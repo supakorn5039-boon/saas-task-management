@@ -11,11 +11,15 @@ import (
 )
 
 type AuthController struct {
-	svc *service.AuthService
+	svc   *service.AuthService
+	audit *service.AuditService
 }
 
 func NewAuthController() *AuthController {
-	return &AuthController{svc: service.NewAuthService()}
+	return &AuthController{
+		svc:   service.NewAuthService(),
+		audit: service.NewAuditService(),
+	}
 }
 
 func (ctrl *AuthController) RegisterRoutes(r *gin.RouterGroup) {
@@ -26,6 +30,14 @@ func (ctrl *AuthController) RegisterRoutes(r *gin.RouterGroup) {
 	{
 		auth.POST("/login", ctrl.login)
 		auth.POST("/register", ctrl.register)
+	}
+
+	// Logout requires a valid token — the endpoint is mostly bookkeeping
+	// (JWT is stateless) but it lets us record the event in the audit log.
+	logout := r.Group("/auth/logout")
+	logout.Use(middleware.Protected())
+	{
+		logout.POST("", ctrl.logout)
 	}
 }
 
@@ -50,10 +62,20 @@ func (ctrl *AuthController) login(c *gin.Context) {
 
 	user, err := ctrl.svc.Login(body.Email, body.Password)
 	if err != nil {
+		// Record the failure with the attempted email so brute-force shows up
+		// as a cluster on the audit page. No actor id (login wasn't valid).
+		ctrl.audit.Record(c, model.AuditActionLoginFailed, model.AuditStatusFailure, service.RecordOpts{
+			ActorEmail: body.Email,
+			Metadata:   model.JSONB{"reason": err.Error()},
+		})
 		errorResponse(c, err)
 		return
 	}
 
+	ctrl.audit.Record(c, model.AuditActionLogin, model.AuditStatusSuccess, service.RecordOpts{
+		ActorID:    &user.Id,
+		ActorEmail: user.Email,
+	})
 	issueToken(c, user)
 }
 
@@ -70,11 +92,23 @@ func (ctrl *AuthController) register(c *gin.Context) {
 		return
 	}
 
+	ctrl.audit.Record(c, model.AuditActionRegister, model.AuditStatusSuccess, service.RecordOpts{
+		ActorID:    &user.Id,
+		ActorEmail: user.Email,
+	})
 	issueToken(c, user)
 }
 
+func (ctrl *AuthController) logout(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+	ctrl.audit.Record(c, model.AuditActionLogout, model.AuditStatusSuccess, service.RecordOpts{
+		ActorID: &userID,
+	})
+	successResponse(c, gin.H{"message": "Logged out"})
+}
+
 func issueToken(c *gin.Context, user *model.UserDto) {
-	token, err := security.GenerateJWT(user.Id, user.Role)
+	token, err := security.GenerateJWT(user.Id, user.Role, user.Email)
 	if err != nil {
 		errorResponse(c, err)
 		return

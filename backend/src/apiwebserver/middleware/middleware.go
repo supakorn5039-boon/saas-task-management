@@ -30,6 +30,7 @@ func Protected() gin.HandlerFunc {
 
 		c.Set("user_id", claims.Id)
 		c.Set("role", claims.Role)
+		c.Set("email", claims.Email)
 		c.Next()
 	}
 }

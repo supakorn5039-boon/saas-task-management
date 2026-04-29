@@ -26,14 +26,14 @@ func TestTaskService_ListTasks(t *testing.T) {
 	otherID := registerForTest(t, "other@example.com")
 
 	tasks := service.NewTaskService()
-	if _, err := tasks.CreateTask(userID, "Buy milk", ""); err != nil {
+	if _, err := tasks.CreateTask(userID, service.CreateTaskInput{Title: "Buy milk"}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := tasks.CreateTask(userID, "Write tests", "for the service layer"); err != nil {
+	if _, err := tasks.CreateTask(userID, service.CreateTaskInput{Title: "Write tests", Description: "for the service layer"}); err != nil {
 		t.Fatal(err)
 	}
 	// Different owner — must not appear in our list.
-	if _, err := tasks.CreateTask(otherID, "Not yours", ""); err != nil {
+	if _, err := tasks.CreateTask(otherID, service.CreateTaskInput{Title: "Not yours"}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -90,7 +90,7 @@ func TestTaskService_UpdateTask(t *testing.T) {
 	otherID := registerForTest(t, "intruder@example.com")
 
 	tasks := service.NewTaskService()
-	created, err := tasks.CreateTask(userID, "Old", "old desc")
+	created, err := tasks.CreateTask(userID, service.CreateTaskInput{Title: "Old", Description: "old desc"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -140,7 +140,7 @@ func TestTaskService_DeleteTask(t *testing.T) {
 	testhelpers.SetupTestDB(t)
 	userID := registerForTest(t, "del@example.com")
 	tasks := service.NewTaskService()
-	created, _ := tasks.CreateTask(userID, "to delete", "")
+	created, _ := tasks.CreateTask(userID, service.CreateTaskInput{Title: "to delete"})
 
 	if err := tasks.DeleteTask(userID, created.ID); err != nil {
 		t.Fatalf("delete: %v", err)

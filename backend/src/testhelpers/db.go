@@ -46,12 +46,12 @@ func SetupTestDB(t *testing.T) *gorm.DB {
 		t.Skipf("test database unreachable (set DATABASE_URL_TEST or start docker-compose): %v", err)
 	}
 
-	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Role{}); err != nil {
+	if err := db.AutoMigrate(&model.User{}, &model.Task{}, &model.Role{}, &model.AuditLog{}); err != nil {
 		t.Fatalf("auto-migrate test schema: %v", err)
 	}
 
 	// CASCADE so foreign-key relations don't block the truncate.
-	if err := db.Exec(`TRUNCATE TABLE users, tasks, roles RESTART IDENTITY CASCADE`).Error; err != nil {
+	if err := db.Exec(`TRUNCATE TABLE users, tasks, roles, audit_logs RESTART IDENTITY CASCADE`).Error; err != nil {
 		t.Fatalf("truncate test tables: %v", err)
 	}
 

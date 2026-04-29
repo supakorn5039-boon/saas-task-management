@@ -19,6 +19,8 @@ const RegisterLazyRouteImport = createFileRoute('/register')()
 const ProfileLazyRouteImport = createFileRoute('/profile')()
 const LoginLazyRouteImport = createFileRoute('/login')()
 const DashboardLazyRouteImport = createFileRoute('/dashboard')()
+const AuditLogsLazyRouteImport = createFileRoute('/audit-logs')()
+const ActivityLazyRouteImport = createFileRoute('/activity')()
 const AboutLazyRouteImport = createFileRoute('/about')()
 const IndexLazyRouteImport = createFileRoute('/')()
 
@@ -57,6 +59,16 @@ const DashboardLazyRoute = DashboardLazyRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any).lazy(() => import('./routes/dashboard.lazy').then((d) => d.Route))
+const AuditLogsLazyRoute = AuditLogsLazyRouteImport.update({
+  id: '/audit-logs',
+  path: '/audit-logs',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/audit-logs.lazy').then((d) => d.Route))
+const ActivityLazyRoute = ActivityLazyRouteImport.update({
+  id: '/activity',
+  path: '/activity',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/activity.lazy').then((d) => d.Route))
 const AboutLazyRoute = AboutLazyRouteImport.update({
   id: '/about',
   path: '/about',
@@ -71,6 +83,8 @@ const IndexLazyRoute = IndexLazyRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexLazyRoute
   '/about': typeof AboutLazyRoute
+  '/activity': typeof ActivityLazyRoute
+  '/audit-logs': typeof AuditLogsLazyRoute
   '/dashboard': typeof DashboardLazyRoute
   '/login': typeof LoginLazyRoute
   '/profile': typeof ProfileLazyRoute
@@ -82,6 +96,8 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexLazyRoute
   '/about': typeof AboutLazyRoute
+  '/activity': typeof ActivityLazyRoute
+  '/audit-logs': typeof AuditLogsLazyRoute
   '/dashboard': typeof DashboardLazyRoute
   '/login': typeof LoginLazyRoute
   '/profile': typeof ProfileLazyRoute
@@ -94,6 +110,8 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexLazyRoute
   '/about': typeof AboutLazyRoute
+  '/activity': typeof ActivityLazyRoute
+  '/audit-logs': typeof AuditLogsLazyRoute
   '/dashboard': typeof DashboardLazyRoute
   '/login': typeof LoginLazyRoute
   '/profile': typeof ProfileLazyRoute
@@ -107,6 +125,8 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/activity'
+    | '/audit-logs'
     | '/dashboard'
     | '/login'
     | '/profile'
@@ -118,6 +138,8 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/activity'
+    | '/audit-logs'
     | '/dashboard'
     | '/login'
     | '/profile'
@@ -129,6 +151,8 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/activity'
+    | '/audit-logs'
     | '/dashboard'
     | '/login'
     | '/profile'
@@ -141,6 +165,8 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexLazyRoute: typeof IndexLazyRoute
   AboutLazyRoute: typeof AboutLazyRoute
+  ActivityLazyRoute: typeof ActivityLazyRoute
+  AuditLogsLazyRoute: typeof AuditLogsLazyRoute
   DashboardLazyRoute: typeof DashboardLazyRoute
   LoginLazyRoute: typeof LoginLazyRoute
   ProfileLazyRoute: typeof ProfileLazyRoute
@@ -201,6 +227,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardLazyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/audit-logs': {
+      id: '/audit-logs'
+      path: '/audit-logs'
+      fullPath: '/audit-logs'
+      preLoaderRoute: typeof AuditLogsLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/activity': {
+      id: '/activity'
+      path: '/activity'
+      fullPath: '/activity'
+      preLoaderRoute: typeof ActivityLazyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -221,6 +261,8 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexLazyRoute: IndexLazyRoute,
   AboutLazyRoute: AboutLazyRoute,
+  ActivityLazyRoute: ActivityLazyRoute,
+  AuditLogsLazyRoute: AuditLogsLazyRoute,
   DashboardLazyRoute: DashboardLazyRoute,
   LoginLazyRoute: LoginLazyRoute,
   ProfileLazyRoute: ProfileLazyRoute,

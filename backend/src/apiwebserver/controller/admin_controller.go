@@ -6,14 +6,19 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/supakorn5039-boon/saas-task-backend/src/apiwebserver/middleware"
 	"github.com/supakorn5039-boon/saas-task-backend/src/apiwebserver/service"
+	"github.com/supakorn5039-boon/saas-task-backend/src/database/model"
 )
 
 type AdminController struct {
 	users *service.UserService
+	audit *service.AuditService
 }
 
 func NewAdminController() *AdminController {
-	return &AdminController{users: service.NewUserService()}
+	return &AdminController{
+		users: service.NewUserService(),
+		audit: service.NewAuditService(),
+	}
 }
 
 func (ctrl *AdminController) RegisterRoutes(r *gin.RouterGroup) {
@@ -66,6 +71,19 @@ func (ctrl *AdminController) updateUser(c *gin.Context) {
 		errorResponse(c, err)
 		return
 	}
+
+	meta := model.JSONB{"targetEmail": user.Email}
+	if body.Role != nil {
+		meta["role"] = *body.Role
+	}
+	if body.Status != nil {
+		meta["status"] = *body.Status
+	}
+	ctrl.audit.Record(c, model.AuditActionUserUpdated, model.AuditStatusSuccess, service.RecordOpts{
+		TargetType: "user",
+		TargetID:   &user.Id,
+		Metadata:   meta,
+	})
 	successResponse(c, user)
 }
 
@@ -76,10 +94,23 @@ func (ctrl *AdminController) deleteUser(c *gin.Context) {
 		return
 	}
 
+	// Snapshot the target's email before delete so the audit row can show it
+	// after the user row is gone (soft-deleted, but not loaded by default).
+	var targetEmail string
+	if t, terr := ctrl.users.GetUserById(targetID); terr == nil {
+		targetEmail = t.Email
+	}
+
 	if err := ctrl.users.AdminDeleteUser(actorID, targetID); err != nil {
 		errorResponse(c, err)
 		return
 	}
+
+	ctrl.audit.Record(c, model.AuditActionUserDeleted, model.AuditStatusSuccess, service.RecordOpts{
+		TargetType: "user",
+		TargetID:   &targetID,
+		Metadata:   model.JSONB{"targetEmail": targetEmail},
+	})
 	successResponse(c, gin.H{"message": "User deleted"})
 }
 

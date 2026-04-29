@@ -162,6 +162,25 @@ func (s *UserService) AdminUpdateUser(actorID, targetID uint, in AdminUpdateUser
 	return user.ToDto(), nil
 }
 
+// ListAssignable returns the lightweight user list used to populate the
+// task-assignee dropdown. Active users only — deactivated accounts can't be
+// assigned new work. No auth check here; the controller mounts this behind
+// Protected so any authenticated user can call it.
+func (s *UserService) ListAssignable() ([]*model.UserDto, error) {
+	var users []model.User
+	err := s.db.Where("status = ?", 1).
+		Order("email asc").
+		Find(&users).Error
+	if err != nil {
+		return nil, apperror.Wrap(err, 500, "failed to list users")
+	}
+	dtos := make([]*model.UserDto, len(users))
+	for i, u := range users {
+		dtos[i] = u.ToDto()
+	}
+	return dtos, nil
+}
+
 // AdminDeleteUser soft-deletes a user (gorm.Model has DeletedAt). Self-delete
 // is rejected to avoid locking the actor out.
 func (s *UserService) AdminDeleteUser(actorID, targetID uint) error {

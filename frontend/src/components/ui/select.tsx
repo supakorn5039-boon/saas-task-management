@@ -16,13 +16,31 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   );
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+// base-ui's Select.Value renders the raw selected `value` (e.g. "1", "admin")
+// unless given a render function or an `items` map. The `labels` prop here is
+// a thin shortcut so call sites can write `labels={ROLE_LABEL}` and get the
+// matching item's label rendered in the trigger.
+type SelectValueProps = SelectPrimitive.Value.Props & {
+  labels?: Record<string | number, React.ReactNode>;
+};
+
+function SelectValue({
+  className,
+  labels,
+  children,
+  ...props
+}: SelectValueProps) {
+  const resolvedChildren =
+    children ??
+    (labels ? (value: unknown) => labels[value as never] : undefined);
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
       className={cn("flex flex-1 text-left", className)}
       {...props}
-    />
+    >
+      {resolvedChildren}
+    </SelectPrimitive.Value>
   );
 }
 

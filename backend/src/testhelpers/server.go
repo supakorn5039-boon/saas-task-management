@@ -47,6 +47,7 @@ func NewTestServer(t *testing.T) *TestServer {
 	controller.NewUserController().RegisterRoutes(api)
 	controller.NewTaskController().RegisterRoutes(api)
 	controller.NewAdminController().RegisterRoutes(api)
+	controller.NewAuditController().RegisterRoutes(api)
 
 	// Mirror the inline /ping and /healthz routes from pkg.MountAPIWebServer
 	// so integration tests can assert on them too. Keep behavior identical.

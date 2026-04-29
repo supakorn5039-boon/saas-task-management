@@ -19,7 +19,17 @@ export function TaskStatusSelect({ value, onChange, className }: Props) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as TaskStatus)}>
       <SelectTrigger className={className ?? "w-36"}>
-        <SelectValue />
+        <SelectValue>
+          {(v) => (
+            <span className="flex items-center gap-2">
+              <span
+                className={`h-2 w-2 rounded-full ${TASK_STATUS_STYLE[v as TaskStatus]?.dot ?? ""}`}
+                aria-hidden
+              />
+              {TASK_STATUS_LABEL[v as TaskStatus] ?? ""}
+            </span>
+          )}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
         {TASK_STATUSES.map((status) => (

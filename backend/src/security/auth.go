@@ -14,12 +14,13 @@ func InitJWT(secret string) {
 	jwtKey = []byte(secret)
 }
 
-func GenerateJWT(id uint, role string) (string, error) {
+func GenerateJWT(id uint, role, email string) (string, error) {
 	expirationTime := time.Now().Add(3 * 24 * time.Hour)
 
 	claims := &model.Claims{
-		Id:   id,
-		Role: role,
+		Id:    id,
+		Role:  role,
+		Email: email,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),

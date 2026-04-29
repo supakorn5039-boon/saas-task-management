@@ -87,7 +87,7 @@ export function UserEditDialog({ user, open, onOpenChange }: Props) {
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange}>
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue labels={ROLE_LABEL} />
                   </SelectTrigger>
                   <SelectContent>
                     {ROLES.map((r) => (
@@ -112,7 +112,7 @@ export function UserEditDialog({ user, open, onOpenChange }: Props) {
                   onValueChange={(v) => field.onChange(Number(v) as 0 | 1)}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue labels={USER_STATUS_LABEL} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">{USER_STATUS_LABEL[1]}</SelectItem>

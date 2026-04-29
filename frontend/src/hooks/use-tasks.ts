@@ -91,3 +91,13 @@ export function useDeleteTask() {
     onSuccess: invalidate,
   });
 }
+
+// Assignable user list — used by the assignee dropdown. The list rarely
+// changes, so cache for a few minutes to avoid refetching on every edit.
+export function useAssignableUsers() {
+  return useQuery({
+    queryKey: taskKeys.assignable(),
+    queryFn: () => taskService.listAssignable(),
+    staleTime: 5 * 60_000,
+  });
+}
